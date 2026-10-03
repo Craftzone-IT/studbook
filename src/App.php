@@ -12,6 +12,7 @@ use Studbook\Auth\UserRepository;
 use Studbook\Controller\AuthController;
 use Studbook\Controller\HomeController;
 use Studbook\Controller\SettingsController;
+use Studbook\Controller\SetupController;
 use Studbook\Database\Connection;
 use Studbook\Http\Csrf;
 use Studbook\Http\Request;
@@ -22,6 +23,7 @@ use Studbook\Http\Url;
 use Studbook\I18n\Formatter;
 use Studbook\I18n\Lang;
 use Studbook\I18n\Translator;
+use Studbook\Setup\SetupService;
 
 final class App
 {
@@ -38,6 +40,7 @@ final class App
     private ?PDO $pdo = null;
     private ?SettingRepository $settings = null;
     private ?Auth $auth = null;
+    private ?SetupService $setup = null;
     private readonly View $view;
     private readonly Router $router;
 
@@ -89,6 +92,10 @@ final class App
         if (!$route->public && !$this->auth()->check()) {
             return Response::redirect(url('/login'));
         }
+        // After an update, send the logged-in user to /setup until the migrations have run.
+        if (!$route->public && $this->setup()->pendingMigrations() !== []) {
+            return Response::redirect(url('/setup'));
+        }
         if ($request->method === 'POST' && !Csrf::isValid($request->input(Csrf::FIELD))) {
             return ErrorPage::render(419, null, $this->view);
         }
@@ -123,6 +130,13 @@ final class App
             $this->view,
             fn (): Auth => $this->auth(),
             fn (): LoginThrottle => $this->throttle(),
+            $this->config,
+            fn (): bool => !$this->setup()->userExists(),
+        );
+        $setup = new SetupController(
+            $this->view,
+            fn (): SetupService => $this->setup(),
+            fn (): Auth => $this->auth(),
             $this->config
         );
         $home = new HomeController($this->view);
@@ -131,6 +145,10 @@ final class App
         $this->router->get('/login', $auth->showLogin(...), public: true);
         $this->router->post('/login', $auth->login(...), public: true);
         $this->router->post('/logout', $auth->logout(...));
+        $this->router->get('/setup', $setup->show(...), public: true);
+        $this->router->post('/setup/token', $setup->token(...), public: true);
+        $this->router->post('/setup/migrate', $setup->migrate(...), public: true);
+        $this->router->post('/setup/user', $setup->createUser(...), public: true);
         $this->router->get('/robots.txt', static fn (): Response => self::robots(), public: true);
 
         $this->router->get('/', $home->index(...));
@@ -162,6 +180,11 @@ final class App
     private function auth(): Auth
     {
         return $this->auth ??= new Auth(fn (): UserRepository => $this->users());
+    }
+
+    private function setup(): SetupService
+    {
+        return $this->setup ??= new SetupService($this->config, fn (): PDO => $this->pdo());
     }
 
     private function throttle(): LoginThrottle

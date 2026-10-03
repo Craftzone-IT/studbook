@@ -62,18 +62,14 @@ Part data provided by [Rebrickable](https://rebrickable.com). Part recognition (
    ```
 
 2. Create an empty MySQL/MariaDB database (`utf8mb4`) and a user for it.
-3. Copy `.env.example` to `.env` and fill it in. Every key is documented there; the app refuses to start when a required key is missing.
-4. Create the tables and the single login:
+3. Copy `.env.example` to `.env` and fill it in. Every key is documented there; the app refuses to start when a required key is missing. For the first installation also set `SETUP_TOKEN` to a random value of at least 16 characters.
+4. Point the web server's document root to `public/` (all other folders must not be web-accessible). Requests that are not existing files go to `public/index.php`; `public/.htaccess` does this for Apache, nginx needs `try_files $uri /index.php?$query_string;`.
+5. Open `https://your-domain/setup`, enter the setup token, and follow the three steps: server check, database tables, your login. Afterwards remove `SETUP_TOKEN` from `.env`.
+6. Choose the language under **Settings**.
 
-   ```bash
-   php bin/migrate
-   php bin/create-user yourname     # asks for the password (min. 10 characters)
-   ```
+**Updates:** after uploading a new version (and `composer install --no-dev`), log in; if the database needs updating you are taken to the setup page to apply it. `php bin/migrate` does the same from the command line.
 
-5. Point the web server's document root to `public/` (all other folders must not be web-accessible). Requests that are not existing files go to `public/index.php`; `public/.htaccess` does this for Apache, nginx needs `try_files $uri /index.php?$query_string;`.
-6. Open the site, log in, and choose the language under **Settings**.
-
-Run `php bin/migrate` again after every update. A forgotten password is reset with `php bin/create-user yourname --reset-password`.
+Command-line alternatives: `php bin/migrate` creates or updates the tables, `php bin/create-user yourname` creates the login, and `php bin/create-user yourname --reset-password` resets a forgotten password.
 
 Uploading over FTP to a HestiaCP server, step by step: [docs/deploy-hestia.md](docs/deploy-hestia.md).
 

@@ -68,6 +68,24 @@ final class Migrator
         return $done;
     }
 
+    /**
+     * Migrations that have not been applied yet. Does not create anything.
+     *
+     * @return list<string> file names, in the order they would be applied
+     */
+    public function pending(): array
+    {
+        $applied = $this->tableExists() ? $this->applied() : [];
+        $pending = [];
+        foreach ($this->available() as $version => $file) {
+            if (!isset($applied[$version])) {
+                $pending[] = basename($file);
+            }
+        }
+
+        return $pending;
+    }
+
     /** @return array<int, string> version => absolute file path, sorted by version */
     public function available(): array
     {
@@ -108,6 +126,11 @@ final class Migrator
         }
 
         return $statements;
+    }
+
+    private function tableExists(): bool
+    {
+        return $this->pdo->query("SHOW TABLES LIKE 'schema_migration'")->fetchColumn() !== false;
     }
 
     private function ensureTable(): void

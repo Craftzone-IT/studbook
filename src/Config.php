@@ -197,6 +197,14 @@ final class Config
         return is_string($path) ? rtrim($path, '/') : '';
     }
 
+    /** @return list<string> reverse proxy IPs whose X-Forwarded-For header is trusted */
+    public function trustedProxies(): array
+    {
+        $list = array_map('trim', explode(',', $this->get('TRUSTED_PROXIES')));
+
+        return array_values(array_filter($list, static fn (string $ip): bool => $ip !== ''));
+    }
+
     public function isHttps(): bool
     {
         return str_starts_with(strtolower($this->get('APP_URL')), 'https://');
