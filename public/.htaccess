@@ -1,0 +1,13 @@
+# Apache: route everything that is not an existing file to the front controller.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header always set X-Robots-Tag "noindex, nofollow"
+    Header always set X-Content-Type-Options "nosniff"
+</IfModule>
+
+Options -Indexes

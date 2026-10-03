@@ -27,7 +27,9 @@ BL↔RB matching: the importer fills `cat_part.bl_num` / `cat_color.bl_id` from 
 | Table | Purpose / key columns |
 | --- | --- |
 | `setting` | `key`, `value` — e.g. `ui_language` (default `en`) |
-| `user` | single login (username, password hash) |
+| `user` | single login (username, password hash, `last_login_at`) |
+| `login_attempt` | failed logins (`ip`, `attempted_at`) for rate limiting; rows older than a day are purged |
+| `schema_migration` | applied migrations (`version`, `name`, `checksum`, `applied_at`); created by `bin/migrate` |
 | `collection` | `id`, `name`, `can_lend` (may "what can I build" borrow from it), `archived_at` |
 | `storage` | `id`, `collection_id` NOT NULL, `name`, `type` (`large`, `small`, `jar`, `inbox`, `set_box`) |
 | `storage_label` | `storage_id`, `part` — part numbers written on the box; source of the entry grid |

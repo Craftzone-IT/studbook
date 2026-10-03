@@ -51,15 +51,18 @@ tesseract --version | head -1
 
 The cache stores files, not running processes, so the database server is started per session by a SessionStart hook (below).
 
-## Per-session start (SessionStart hook) — added in M0
+## Per-session start (SessionStart hook)
 
-M0 adds `.claude/settings.json` with a SessionStart hook that runs `scripts/cloud-session-start.sh` **only when `CLAUDE_CODE_REMOTE=true`**. That script must be idempotent and fast:
+`.claude/settings.json` has a SessionStart hook that runs `scripts/cloud-session-start.sh` **only when `CLAUDE_CODE_REMOTE=true`**. The script is idempotent and fast:
 
 1. `service mariadb start`
 2. create the `studbook` and `studbook_test` databases and a dev user if missing;
 3. copy `.env.example` to `.env` with dev values if `.env` does not exist;
 4. `composer install` (skipped when `vendor/` is up to date);
-5. `php bin/migrate`.
+5. `php bin/migrate`;
+6. export `STUDBOOK_TEST_DB_*` (via `CLAUDE_ENV_FILE`) so PHPUnit's database tests run against `studbook_test`.
+
+Dev credentials are `studbook` / `studbook` on localhost only. Start the app with `php -S localhost:8080 -t public public/index.php`.
 
 ## Notes
 

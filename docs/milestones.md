@@ -2,7 +2,7 @@
 
 Each milestone becomes one or more GitHub issues; each issue becomes one PR. Acceptance criteria below are the issue bodies. Tick items off by closing the issue; keep this file as the plan, not the progress log (progress goes in `CLAUDE.md` → Current status).
 
-To create the issues with the GitHub CLI, copy each section into `gh issue create --title "<title>" --body-file <file>` or paste them by hand.
+Issues: one per milestone, Craftzone-IT/studbook#1 (M0) to #7 (M6), created on 2026-10-03.
 
 ---
 
