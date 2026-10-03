@@ -6,7 +6,7 @@ Guidance for Claude Code (and humans) working in this repository. Read this firs
 
 Studbook is an open-source (AGPL-3.0), self-hosted PHP/MySQL web app for cataloguing a physical brick collection and finding out what can be built from it. One login per instance, several collections, no public registration.
 
-Background, decisions and their reasons: `docs/decisions.md`. Data model: `docs/data-model.md`. Roadmap and issue specs: `docs/milestones.md`.
+Background, decisions and their reasons: `docs/decisions.md`. Data model: `docs/data-model.md`. Roadmap and issue specs: `docs/milestones.md`. Cloud development environment: `docs/cloud-dev.md`.
 
 ## Current status
 
