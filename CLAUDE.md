@@ -11,8 +11,8 @@ Background, decisions and their reasons: `docs/decisions.md`. Data model: `docs/
 ## Current status
 
 - **Phase:** M0 – Skeleton in progress (issue Craftzone-IT/studbook#1). Issues exist for every milestone (#1 M0 … #7 M6).
-- **Done in M0 so far:** Composer/PSR-4/PSR-12/PHPUnit, front controller + router + error pages, `.env` loading with required-key check, `bin/migrate` (checksummed migrations), single-user login with session hardening, CSRF and DB-backed rate limiting, `bin/create-user`, login wall + `noindex` + `robots.txt`, i18n (`t()`, en/hu, Settings page, locale-aware formatting), responsive layout with Rebrickable attribution, `bin/check-translations`, GitHub Actions CI + deploy workflow, `docs/deploy-hestia.md`, cloud SessionStart hook.
-- **Next:** configure the deploy secrets and verify a real deploy on the HestiaCP host (the remaining M0 "done when" item); then M1 – Catalogue importer.
+- **Done in M0 so far:** Composer/PSR-4/PSR-12/PHPUnit, front controller + router + error pages, `.env` loading with required-key check, `bin/migrate` (checksummed migrations), single-user login with session hardening, CSRF and DB-backed rate limiting, `bin/create-user`, login wall + `noindex` + `robots.txt`, i18n (`t()`, en/hu, Settings page, locale-aware formatting), responsive layout with Rebrickable attribution, `bin/check-translations`, GitHub Actions CI, manual FTP deployment guide in `docs/deploy-hestia.md`, cloud SessionStart hook.
+- **Next:** first manual install on the HestiaCP host following `docs/deploy-hestia.md` (the remaining M0 "done when" item); then M1 – Catalogue importer.
 - **Open questions:**
   - PHP version on the maintainer's HestiaCP host (code targets 8.2+; CI tests 8.2 and 8.3).
   - Hestia custom document root for `public/` — confirm the `v-change-web-domain-docroot` approach in `docs/deploy-hestia.md` on the real host.
@@ -61,6 +61,6 @@ Checks before every push: `composer lint`, `php bin/check-translations`, `compos
 
 - One issue → one branch → one PR. Keep PRs focused on a single milestone item.
 - PR description: what and why, how it was tested, screenshots for UI changes (desktop + mobile).
-- `main` is deployable; merging to `main` deploys (pipeline set up in M0).
+- `main` is always deployable. Deployment is manual: the maintainer uploads from a local clone (Windows) over FTP, then runs `composer install --no-dev` and `php bin/migrate` on the server over SSH (`docs/deploy-hestia.md`). There is no automatic deploy.
 - Domain terms: **collection** (independent inventory), **storage/box** (physical container, always belongs to one collection), **owned set** (set kept as a unit: reference inventory + deltas), **loose lot** (part+colour+quantity in a box), **build** (target set being assembled), **allocation** (parts reserved for a build), **batch** (undo unit).
 - Internal keys are Rebrickable IDs; the UI always shows BrickLink item numbers and colours.

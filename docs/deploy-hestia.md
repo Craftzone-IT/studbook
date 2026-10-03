@@ -1,16 +1,17 @@
 # Deploying to HestiaCP (example)
 
-This is an **example** for the maintainer's setup (HestiaCP, MariaDB, NPMplus reverse proxy). Nothing here is required by the code: any host with PHP 8.2+, MySQL 8 / MariaDB 10.6+ and SSH works. Verify paths and commands against your Hestia version.
+This is an **example** for the maintainer's setup: HestiaCP, MariaDB, NPMplus reverse proxy, code uploaded **by hand over FTP** from a local clone (Windows works fine: e.g. WinSCP or FileZilla), dependencies installed and commands run on the server over **SSH**. No PHP or Composer is needed on your computer. Nothing here is required by the code: any host with PHP 8.2+, MySQL 8 / MariaDB 10.6+ and a way to run PHP on the command line works. Verify paths and commands against your Hestia version.
 
-Placeholders: `USER` = Hestia user, `studbook.example.com` = your domain.
+Placeholders: `USER` = Hestia user, `studbook.example.com` = your domain, `APP_DIR` = the folder the app is uploaded to, e.g. `/home/USER/web/studbook.example.com/public_html/studbook`.
 
 ## 1. One-time server setup
 
 1. **Web domain:** create `studbook.example.com` in Hestia, enable SSL (Let's Encrypt). Behind NPMplus, terminate TLS in NPMplus and forward to the Hestia host.
-2. **PHP:** select PHP 8.2 or newer for the domain (backend template). Required extensions: `pdo_mysql`, `mbstring`; recommended: `intl`.
+2. **PHP:** select PHP 8.2 or newer for the domain. Required extensions: `pdo_mysql`, `mbstring`; recommended: `intl`.
 3. **Database:** create a database and user in Hestia (e.g. `USER_studbook`). Use `utf8mb4`.
-4. **SSH:** give the Hestia user a shell (*Users → Edit → SSH access: bash*) and add the deploy public key to `~USER/.ssh/authorized_keys`. Use a dedicated key pair for GitHub Actions only.
-5. **Code location and document root:** the deploy uploads the repository to `DEPLOY_PATH`, for example `/home/USER/web/studbook.example.com/public_html/studbook`. Only its `public/` folder may be web-accessible, so point the domain's document root there:
+4. **SSH:** give the Hestia user a shell (*Users → Edit → SSH access: bash*). Note the PHP CLI binary matching the domain's PHP version, e.g. `/usr/bin/php8.3` (`php` alone may be a different version).
+5. **Composer:** install it for the Hestia user (as root: `v-add-user-composer USER`); it ends up in `~/.composer/composer`. Check with `/usr/bin/php8.3 ~/.composer/composer --version`. If you prefer, download `composer.phar` from getcomposer.org into your home folder instead.
+6. **Document root:** only the app's `public/` folder may be web-accessible. Point the domain's document root there:
 
    ```bash
    # as root on the Hestia server
@@ -18,41 +19,62 @@ Placeholders: `USER` = Hestia user, `studbook.example.com` = your domain.
    ```
 
    (Or in the panel: *Web → Edit domain → Advanced options → Custom document root*.) Requests that are not static files must reach `public/index.php`: Hestia's nginx + Apache templates use `public/.htaccess`; the nginx + PHP-FPM templates already fall back to `index.php`.
-6. **Configuration:** create `DEPLOY_PATH/.env` by hand from `.env.example` (production values, `APP_ENV=production`, `APP_DEBUG=false`, real DB credentials, `APP_URL=https://studbook.example.com`). If NPMplus runs on another host, put its IP in `TRUSTED_PROXIES`. The deploy never overwrites `.env` or `storage/`.
-7. **Storage:** `mkdir -p DEPLOY_PATH/storage` and make it writable by PHP (in Hestia PHP runs as `USER`, so the default permissions are fine).
 
-## 2. GitHub Actions secrets
+## 2. Before uploading (on your computer)
 
-Set these under *Repository → Settings → Secrets and variables → Actions* (or on the `production` environment). Without `DEPLOY_HOST`, `DEPLOY_USER` and `DEPLOY_PATH` the deploy job is skipped.
+In your local clone, switch to the latest `main` (`git checkout main`, `git pull`, or the same in your Git GUI). Nothing else is needed locally.
 
-| Secret | Example | Notes |
-| --- | --- | --- |
-| `DEPLOY_HOST` | `hestia.example.com` | SSH host name or IP |
-| `DEPLOY_PORT` | `22` | optional, default 22 |
-| `DEPLOY_USER` | `USER` | the Hestia user |
-| `DEPLOY_PATH` | `/home/USER/web/studbook.example.com/public_html/studbook` | absolute path, no trailing slash |
-| `DEPLOY_SSH_KEY` | `-----BEGIN OPENSSH PRIVATE KEY-----…` | private key of the deploy key pair |
-| `DEPLOY_KNOWN_HOSTS` | output of `ssh-keyscan -p 22 hestia.example.com` | pins the host key |
-| `DEPLOY_PHP` | `/usr/bin/php8.3` | optional; PHP CLI matching the domain's PHP version, default `php` |
+## 3. What to upload
 
-## 3. What a deploy does
+Upload these to `APP_DIR` (FTP client in "overwrite if newer" or "overwrite" mode):
 
-On every push to `main` (`.github/workflows/deploy.yml`):
+| Upload | Do **not** upload |
+| --- | --- |
+| `bin/`, `lang/`, `migrations/`, `public/` (including `.htaccess`), `src/`, `templates/` | `.env` (if you have one locally) |
+| `composer.json`, `composer.lock`, `.env.example`, `LICENSE`, `README.md` | `storage/` contents (the server has its own data) |
+| | `vendor/` (installed on the server by Composer) |
+| | `.git/`, `.github/`, `.claude/`, `tests/`, `scripts/`, `docs/` (not needed on the server) |
 
-1. runs the CI workflow (lint, translation check, tests);
-2. installs Composer dependencies without dev packages;
-3. `rsync --delete` to `DEPLOY_PATH`, excluding the paths in `.deployignore` (`.env`, `storage/`, tests, CI files);
-4. runs `php bin/migrate` on the server.
+Make sure hidden files are shown in the FTP client so `public/.htaccess` gets uploaded.
 
-## 4. First login
+If a file was deleted or renamed in the repository, delete the old copy on the server too (most often in `src/` or `templates/`). Leftover files are not executed directly, but they can confuse later updates.
 
-After the first deploy, create the login over SSH:
+## 4. First installation (once, over SSH)
 
 ```bash
-cd /home/USER/web/studbook.example.com/public_html/studbook
+cd APP_DIR
+cp .env.example .env
+nano .env        # APP_ENV=production, APP_DEBUG=false, APP_URL=https://studbook.example.com,
+                 # DB_* from step 1.3; TRUSTED_PROXIES = the NPMplus IP if it runs on another host
+mkdir -p storage
+/usr/bin/php8.3 ~/.composer/composer install --no-dev --optimize-autoloader
+/usr/bin/php8.3 bin/migrate
 /usr/bin/php8.3 bin/create-user yourname
 ```
 
-## 5. Backups
+Then open `https://studbook.example.com`, log in, and pick the language under **Settings**.
+
+## 5. Every update
+
+1. On your computer: update the clone to the latest `main` (section 2).
+2. Upload the files (section 3).
+3. Over SSH:
+
+   ```bash
+   cd APP_DIR
+   /usr/bin/php8.3 ~/.composer/composer install --no-dev --optimize-autoloader
+   /usr/bin/php8.3 bin/migrate
+   ```
+
+   Both are safe to run every time: Composer does nothing when `composer.lock` has not changed, and `bin/migrate` prints "Database is up to date." when there is nothing to apply.
+
+## 6. Troubleshooting
+
+- **"Dependencies are missing"** — Composer has not been run on the server yet (section 4/5), or it failed; run it again and read its output.
+- **"Missing required configuration keys"** — `.env` on the server lacks keys that a newer `.env.example` documents; copy them over.
+- **Generic "Something went wrong" page** — details are in the domain's PHP error log (Hestia: `/var/log/apache2/domains/studbook.example.com.error.log` or the PHP-FPM log). Never set `APP_DEBUG=true` in production.
+- **Forgotten password** — `/usr/bin/php8.3 bin/create-user yourname --reset-password`.
+
+## 7. Backups
 
 Hestia's built-in backup covers the database and the domain folder (including `.env` and uploads). Catalogue data can always be re-imported.

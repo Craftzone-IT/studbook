@@ -54,7 +54,7 @@ Record of product and technical decisions made during planning (October 2026). A
 - HestiaCP, PHP + MySQL, behind an NPMplus reverse proxy, Let's Encrypt HTTPS.
 - Login on every page, no extra protection layer. `noindex` + disallow-all `robots.txt`.
 - Backups: HestiaCP's built-in backup is sufficient (catalogue data can always be re-imported).
-- Development on GitHub; code written by Claude Code; issue → PR → review → merge → automatic deploy via GitHub Actions.
+- Development on GitHub; code written by Claude Code; issue → PR → review → merge. ~~Automatic deploy via GitHub Actions.~~ Superseded 2026-10-03: deployment is manual (see below).
 
 ## M0 implementation (2026-10-03)
 
@@ -63,5 +63,6 @@ Record of product and technical decisions made during planning (October 2026). A
 - **Login rate limiting** is stored in the database (`login_attempt`): 5 failures per IP and 30 in total per 15 minutes. Behind a reverse proxy (NPMplus) the client IP comes from `X-Forwarded-For` only when the peer is listed in `TRUSTED_PROXIES`.
 - **Session cookies** are `Secure` when `APP_URL` is `https://` (not detected from the request, which is unreliable behind a proxy). Sessions end after 7 days without activity.
 - **Migrations:** one statement per `;` at the end of a line; applied migrations are checksummed and an edited one stops `bin/migrate`.
-- **Deploy** is rsync over SSH from GitHub Actions; `.env` and `storage/` on the server are never touched (`.deployignore`). Without deploy secrets the job is skipped.
+- ~~**Deploy** is rsync over SSH from GitHub Actions.~~ Superseded the same day: the maintainer prefers to upload by hand.
+- **Manual deployment (2026-10-03):** the maintainer uploads from a local clone (Windows) over FTP and runs `composer install --no-dev` and `php bin/migrate` on the server over SSH, so no PHP tooling is needed on the desktop and `vendor/` is never uploaded. GitHub Actions only runs CI (lint, translation check, tests) on PRs and on `main`. Reasons: full control over when the live site changes, no deploy credentials stored on GitHub.
 - **Footer links the source code** (`APP_SOURCE_URL`) because AGPL-3.0 requires offering the source to users of a modified network version.
