@@ -61,6 +61,6 @@ Checks before every push: `composer lint`, `php bin/check-translations`, `compos
 
 - One issue → one branch → one PR. Keep PRs focused on a single milestone item.
 - PR description: what and why, how it was tested, screenshots for UI changes (desktop + mobile).
-- `main` is always deployable. Deployment is manual: the maintainer uploads from a local clone over FTP and runs `php bin/migrate` over SSH (`docs/deploy-hestia.md`). There is no automatic deploy.
+- `main` is always deployable. Deployment is manual: the maintainer uploads from a local clone (Windows) over FTP, then runs `composer install --no-dev` and `php bin/migrate` on the server over SSH (`docs/deploy-hestia.md`). There is no automatic deploy.
 - Domain terms: **collection** (independent inventory), **storage/box** (physical container, always belongs to one collection), **owned set** (set kept as a unit: reference inventory + deltas), **loose lot** (part+colour+quantity in a box), **build** (target set being assembled), **allocation** (parts reserved for a build), **batch** (undo unit).
 - Internal keys are Rebrickable IDs; the UI always shows BrickLink item numbers and colours.
