@@ -7,7 +7,8 @@
         "php": ">=8.2",
         "ext-mbstring": "*",
         "ext-pdo": "*",
-        "ext-pdo_mysql": "*"
+        "ext-pdo_mysql": "*",
+        "chillerlan/php-qrcode": "^6.0"
     },
     "suggest": {
         "ext-intl": "Locale-aware date and number formatting (falls back to a simple formatter without it)"

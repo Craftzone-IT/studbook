@@ -56,6 +56,16 @@ Record of product and technical decisions made during planning (October 2026). A
 - Backups: HestiaCP's built-in backup is sufficient (catalogue data can always be re-imported).
 - Development on GitHub; code written by Claude Code; issue → PR → review → merge. ~~Automatic deploy via GitHub Actions.~~ Superseded 2026-10-03: deployment is manual (see below).
 
+## M2 collections and boxes (2026-10-03)
+
+- **Undo journal:** every write goes through a batch that stamps `batch_id` and journals before/after rows (`batch_change`). Revert works newest first and is refused if a later batch touched the same rows, instead of silently overwriting newer data. Collection delete and box delete are ordinary batches, so "delete with confirmation" can be undone right away from the message.
+- **Deleting a box moves its contents to the collection's Inbox**; the Inbox cannot be deleted. Nothing is lost by deleting a box.
+- **Moving lots between collections** is left for M4 (one batch with sets and boxes); in M2 lots move between boxes of the same collection.
+- **QR codes:** `chillerlan/php-qrcode` (MIT/Apache-2.0) renders SVG on the server; first runtime Composer dependency, because writing a QR encoder is not worth it. The QR encodes `{APP_URL}/b/{id}`.
+- **Images:** fetched server-side on first display from the URL in `cat_part_color` (only `https://*.rebrickable.com`, ≤ 2 MB, image types only), stored under `IMAGE_CACHE_PATH`, served by `/img` behind the login. Missing images are retried after a week, temporary failures after an hour; a neutral placeholder is shown meanwhile.
+- **Strict CSP stays:** colour swatches are tiny inline SVGs (`fill` attribute), not inline `style`, so `style-src` needs no `unsafe-inline`.
+- **"Add here" without JavaScript:** part number (or a label tile) → colour page with only the colours the part exists in → quantity. The keyboard-optimised entry grid is M3.
+
 ## M1 catalogue import (2026-10-03)
 
 - **No BrickLink IDs in Rebrickable's CSVs.** The downloads carry no external IDs, so BL numbers are matched locally: colours by normalised name (Rebrickable uses BrickLink's names almost everywhere), parts by identical number and then BrickLink's alternate item numbers. Ambiguous matches are not guessed. Prints usually stay unmatched; showing the BL number of the unprinted parent is left for later. Rebrickable's API would give exact external IDs but needs a per-user key; not used for now.

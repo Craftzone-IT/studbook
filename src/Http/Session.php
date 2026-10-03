@@ -76,13 +76,13 @@ final class Session
         session_destroy();
     }
 
-    /** Stores a one-time message shown on the next page. */
-    public static function flash(string $type, string $message): void
+    /** Stores a one-time message shown on the next page, optionally with an "Undo" button for a batch. */
+    public static function flash(string $type, string $message, ?int $undoBatch = null): void
     {
-        $_SESSION['_flash'][] = ['type' => $type, 'message' => $message];
+        $_SESSION['_flash'][] = ['type' => $type, 'message' => $message, 'undo' => $undoBatch];
     }
 
-    /** @return list<array{type: string, message: string}> */
+    /** @return list<array{type: string, message: string, undo?: ?int}> */
     public static function takeFlashes(): array
     {
         $flashes = $_SESSION['_flash'] ?? [];
