@@ -1,0 +1,27 @@
+# Local configuration
+.env
+
+# Runtime data: catalogue downloads, BrickLink files, image cache, uploads.
+# These must never be committed (see docs/decisions.md).
+/storage/*
+!/storage/.gitkeep
+
+# Data files that might be dropped in the wrong place
+*.csv
+*.csv.gz
+*.tsv
+*.sql.gz
+*.dump
+!/tests/fixtures/**
+
+# Dependencies and tooling
+/vendor/
+/node_modules/
+.phpunit.result.cache
+.php-cs-fixer.cache
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
