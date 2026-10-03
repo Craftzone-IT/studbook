@@ -45,34 +45,39 @@ If a file was deleted or renamed in the repository, delete the old copy on the s
 cd APP_DIR
 cp .env.example .env
 nano .env        # APP_ENV=production, APP_DEBUG=false, APP_URL=https://studbook.example.com,
-                 # DB_* from step 1.3; TRUSTED_PROXIES = the NPMplus IP if it runs on another host
-mkdir -p storage
+                 # DB_* from step 1.3; TRUSTED_PROXIES = the NPMplus IP if it runs on another host;
+                 # SETUP_TOKEN = a random value of at least 16 characters
 /usr/bin/php8.3 ~/.composer/composer install --no-dev --optimize-autoloader
-/usr/bin/php8.3 bin/migrate
-/usr/bin/php8.3 bin/create-user yourname
 ```
 
-Then open `https://studbook.example.com`, log in, and pick the language under **Settings**.
+(Instead of `cp` and `nano` you can also upload a filled-in `.env` over FTP; just never commit it.)
+
+Then, in the browser:
+
+1. Open `https://studbook.example.com/setup` and enter the `SETUP_TOKEN` value.
+2. **Server check:** every line should say OK (`intl` is only recommended). Fix any error in `.env` or the Hestia panel, then press *Check again*. The storage folder is created automatically if possible.
+3. **Database tables:** press *Apply database updates*.
+4. **Your login:** choose username and password. You are logged in right away.
+5. Remove the `SETUP_TOKEN` line from `.env`. The setup page no longer opens once a login exists, but the token is not needed any more either.
+
+Pick the language under **Settings**.
+
+Command-line alternative to steps 1–4: `/usr/bin/php8.3 bin/migrate` and `/usr/bin/php8.3 bin/create-user yourname`.
 
 ## 5. Every update
 
 1. On your computer: update the clone to the latest `main` (section 2).
 2. Upload the files (section 3).
-3. Over SSH:
-
-   ```bash
-   cd APP_DIR
-   /usr/bin/php8.3 ~/.composer/composer install --no-dev --optimize-autoloader
-   /usr/bin/php8.3 bin/migrate
-   ```
-
-   Both are safe to run every time: Composer does nothing when `composer.lock` has not changed, and `bin/migrate` prints "Database is up to date." when there is nothing to apply.
+3. Over SSH: `cd APP_DIR && /usr/bin/php8.3 ~/.composer/composer install --no-dev --optimize-autoloader`. Safe to run every time; it does nothing when `composer.lock` has not changed.
+4. Log in. If the new version brings database updates, you are taken to the setup page; press *Apply database updates*. (Or over SSH: `/usr/bin/php8.3 bin/migrate`, which prints "Database is up to date." when there is nothing to apply.)
 
 ## 6. Troubleshooting
 
 - **"Dependencies are missing"** — Composer has not been run on the server yet (section 4/5), or it failed; run it again and read its output.
 - **"Missing required configuration keys"** — `.env` on the server lacks keys that a newer `.env.example` documents; copy them over.
 - **Generic "Something went wrong" page** — details are in the domain's PHP error log (Hestia: `/var/log/apache2/domains/studbook.example.com.error.log` or the PHP-FPM log). Never set `APP_DEBUG=true` in production.
+- **Setup page says "not set up yet" on a working site** — the app cannot reach the database or finds no login. Check `DB_*` in `.env`; the setup page (with `SETUP_TOKEN`) shows the exact database error.
+- **A database update fails on the setup page** — the message is shown there and written to the PHP error log. Fix the cause, then apply again, or run `bin/migrate` over SSH for the full output.
 - **Forgotten password** — `/usr/bin/php8.3 bin/create-user yourname --reset-password`.
 
 ## 7. Backups

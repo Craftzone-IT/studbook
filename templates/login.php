@@ -7,10 +7,17 @@ use Studbook\Http\Csrf;
 /**
  * @var string $username
  * @var string|null $error
+ * @var bool $setupHint
  */
 ?>
 <section class="card login-card">
     <h1><?= e(t('login.title')) ?></h1>
+    <?php if ($setupHint) : ?>
+        <p class="flash flash-info">
+            <?= e(t('login.setup_hint')) ?>
+            <a href="<?= e(url('/setup')) ?>"><?= e(t('login.setup_link')) ?></a>
+        </p>
+    <?php endif; ?>
     <?php if ($error !== null) : ?>
         <p class="flash flash-error" role="alert"><?= e($error) ?></p>
     <?php endif; ?>

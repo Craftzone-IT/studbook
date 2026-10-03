@@ -12,7 +12,8 @@ Background, decisions and their reasons: `docs/decisions.md`. Data model: `docs/
 
 - **Phase:** M0 – Skeleton in progress (issue Craftzone-IT/studbook#1). Issues exist for every milestone (#1 M0 … #7 M6).
 - **Done in M0 so far:** Composer/PSR-4/PSR-12/PHPUnit, front controller + router + error pages, `.env` loading with required-key check, `bin/migrate` (checksummed migrations), single-user login with session hardening, CSRF and DB-backed rate limiting, `bin/create-user`, login wall + `noindex` + `robots.txt`, i18n (`t()`, en/hu, Settings page, locale-aware formatting), responsive layout with Rebrickable attribution, `bin/check-translations`, GitHub Actions CI, manual FTP deployment guide in `docs/deploy-hestia.md`, cloud SessionStart hook.
-- **Next:** first manual install on the HestiaCP host following `docs/deploy-hestia.md` (the remaining M0 "done when" item); then M1 – Catalogue importer.
+- **In progress:** #9 browser setup wizard (`/setup`: server checks, migrations, first login, protected by `SETUP_TOKEN`).
+- **Next:** first install on the HestiaCP host using the setup page (closes M0, #1); then M1 – Catalogue importer (#2).
 - **Open questions:**
   - PHP version on the maintainer's HestiaCP host (code targets 8.2+; CI tests 8.2 and 8.3).
   - Hestia custom document root for `public/` — confirm the `v-change-web-domain-docroot` approach in `docs/deploy-hestia.md` on the real host.
