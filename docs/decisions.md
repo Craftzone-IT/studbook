@@ -55,3 +55,13 @@ Record of product and technical decisions made during planning (October 2026). A
 - Login on every page, no extra protection layer. `noindex` + disallow-all `robots.txt`.
 - Backups: HestiaCP's built-in backup is sufficient (catalogue data can always be re-imported).
 - Development on GitHub; code written by Claude Code; issue → PR → review → merge → automatic deploy via GitHub Actions.
+
+## M0 implementation (2026-10-03)
+
+- **No runtime dependencies** besides PHP extensions: own small router, `.env` parser and migrator instead of a framework. Fewer moving parts on shared hosting; dev dependencies are PHPUnit and PHP_CodeSniffer only.
+- **`ext-intl` is optional.** Dates and numbers use `IntlDateFormatter`/`NumberFormatter` when available and a small built-in table (en, hu) otherwise, so a host without intl still works.
+- **Login rate limiting** is stored in the database (`login_attempt`): 5 failures per IP and 30 in total per 15 minutes. Behind a reverse proxy (NPMplus) the client IP comes from `X-Forwarded-For` only when the peer is listed in `TRUSTED_PROXIES`.
+- **Session cookies** are `Secure` when `APP_URL` is `https://` (not detected from the request, which is unreliable behind a proxy). Sessions end after 7 days without activity.
+- **Migrations:** one statement per `;` at the end of a line; applied migrations are checksummed and an edited one stops `bin/migrate`.
+- **Deploy** is rsync over SSH from GitHub Actions; `.env` and `storage/` on the server are never touched (`.deployignore`). Without deploy secrets the job is skipped.
+- **Footer links the source code** (`APP_SOURCE_URL`) because AGPL-3.0 requires offering the source to users of a modified network version.

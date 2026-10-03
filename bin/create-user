@@ -1,0 +1,52 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+// Creates the single login, or resets its password.
+// Usage: php bin/create-user <username> [--reset-password]
+// The password is read from the terminal (hidden) or from standard input.
+
+use Studbook\Auth\UserRepository;
+use Studbook\Cli\Console;
+use Studbook\Database\Connection;
+
+require dirname(__DIR__) . '/vendor/autoload.php';
+
+const MIN_PASSWORD_LENGTH = 10;
+
+$args = array_slice($argv, 1);
+$reset = in_array('--reset-password', $args, true);
+$positional = array_values(array_filter($args, static fn (string $a): bool => !str_starts_with($a, '--')));
+$username = trim($positional[0] ?? '');
+if ($username === '' || !preg_match('/^[\p{L}\p{N}._@-]{1,64}$/u', $username)) {
+    Console::fail('Usage: php bin/create-user <username> [--reset-password]'
+        . ' (letters, digits, ".", "_", "@", "-"; max 64 characters)');
+}
+
+$users = new UserRepository(Connection::fromConfig(Console::config()));
+$existing = $users->findByUsername($username);
+
+if ($reset && $existing === null) {
+    Console::fail(sprintf('User "%s" does not exist.', $username));
+}
+if (!$reset && $users->count() > 0) {
+    Console::fail('A user already exists. Studbook has a single login; use --reset-password to change it.');
+}
+
+$password = Console::promptHidden('Password: ');
+$interactive = stream_isatty(STDIN);
+if ($interactive && Console::promptHidden('Repeat password: ') !== $password) {
+    Console::fail('Passwords do not match.');
+}
+if (mb_strlen($password) < MIN_PASSWORD_LENGTH) {
+    Console::fail(sprintf('The password must be at least %d characters long.', MIN_PASSWORD_LENGTH));
+}
+
+if ($existing !== null) {
+    $users->updatePassword($existing['id'], $password);
+    Console::out(sprintf('Password for "%s" updated.', $username));
+} else {
+    $users->create($username, $password);
+    Console::out(sprintf('User "%s" created.', $username));
+}

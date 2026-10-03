@@ -1,0 +1,26 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+// Applies pending migrations from migrations/ in order.
+// Usage: php bin/migrate
+
+use Studbook\Cli\Console;
+use Studbook\Database\Connection;
+use Studbook\Database\Migrator;
+
+require dirname(__DIR__) . '/vendor/autoload.php';
+
+$config = Console::config();
+$migrator = new Migrator(Connection::fromConfig($config), dirname(__DIR__) . '/migrations');
+
+try {
+    $applied = $migrator->migrate(static fn (string $message) => Console::out($message));
+} catch (Throwable $e) {
+    Console::fail($e->getMessage());
+}
+
+Console::out($applied === []
+    ? 'Database is up to date.'
+    : sprintf('Applied %d migration(s).', count($applied)));

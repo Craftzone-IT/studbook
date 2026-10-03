@@ -1,0 +1,24 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+// Health check: every key in lang/en.php must exist in lang/hu.php and vice versa.
+// Exits with status 1 when a language file is incomplete.
+
+use Studbook\Cli\Console;
+use Studbook\I18n\TranslationChecker;
+
+require dirname(__DIR__) . '/vendor/autoload.php';
+
+$problems = (new TranslationChecker(dirname(__DIR__) . '/lang'))->problems();
+if ($problems === []) {
+    Console::out('Translations OK: all language files have the same keys.');
+    exit(0);
+}
+foreach ($problems as $language => $list) {
+    foreach ($list as $problem) {
+        Console::err(sprintf('%s: %s', $language, $problem));
+    }
+}
+exit(1);

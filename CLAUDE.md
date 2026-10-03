@@ -10,14 +10,14 @@ Background, decisions and their reasons: `docs/decisions.md`. Data model: `docs/
 
 ## Current status
 
-- **Phase:** planning done, no application code yet.
-- **Next:** milestone **M0 – Skeleton** (see `docs/milestones.md`).
+- **Phase:** M0 – Skeleton in progress (issue Craftzone-IT/studbook#1). Issues exist for every milestone (#1 M0 … #7 M6).
+- **Done in M0 so far:** Composer/PSR-4/PSR-12/PHPUnit, front controller + router + error pages, `.env` loading with required-key check, `bin/migrate` (checksummed migrations), single-user login with session hardening, CSRF and DB-backed rate limiting, `bin/create-user`, login wall + `noindex` + `robots.txt`, i18n (`t()`, en/hu, Settings page, locale-aware formatting), responsive layout with Rebrickable attribution, `bin/check-translations`, GitHub Actions CI + deploy workflow, `docs/deploy-hestia.md`, cloud SessionStart hook.
+- **Next:** configure the deploy secrets and verify a real deploy on the HestiaCP host (the remaining M0 "done when" item); then M1 – Catalogue importer.
 - **Open questions:**
-  - PHP version on the maintainer's HestiaCP host (README assumes 8.2+; confirm before M0).
+  - PHP version on the maintainer's HestiaCP host (code targets 8.2+; CI tests 8.2 and 8.3).
+  - Hestia custom document root for `public/` — confirm the `v-change-web-domain-docroot` approach in `docs/deploy-hestia.md` on the real host.
   - Server-side OCR engine (Tesseract first; test on handwritten part numbers in M6).
   - Brickognize response format: which ID system, whether colour is returned (test call in M6).
-
-Update this section at the end of every PR: what changed, what is next, new open questions.
 
 ## Hard rules
 
@@ -40,7 +40,7 @@ Update this section at the end of every PR: what changed, what is next, new open
 - Tests: PHPUnit for domain logic (importer mapping, coverage calculation, undo). Keep tests runnable without network access.
 - Code style: PSR-12. Strict types in every PHP file.
 
-Directory layout (to be created in M0, adjust if a better reason appears and document it):
+Directory layout (adjust if a better reason appears and document it):
 
 ```
 public/        web root (index.php front controller, assets)
@@ -51,7 +51,11 @@ bin/           CLI entry points (migrate, import)
 tests/         PHPUnit tests
 docs/          project documentation
 storage/       runtime data: catalogue files, image cache, uploads (git-ignored)
+templates/     PHP view templates (escape with e(), translate with t())
+scripts/       development helpers (cloud session setup)
 ```
+
+Checks before every push: `composer lint`, `php bin/check-translations`, `composer test` (DB tests need `STUDBOOK_TEST_DB_*`, set automatically in cloud sessions).
 
 ## Workflow
 

@@ -2,7 +2,7 @@
 
 A self-hosted web app for cataloguing your brick collection — sets, loose parts and the boxes they live in — and for answering the question **"what can I build from what I already have?"**
 
-> **Status:** early development. Nothing is usable yet. See [docs/milestones.md](docs/milestones.md) for the roadmap.
+> **Status:** early development. The skeleton (login, settings, bilingual UI) works; cataloguing features are not there yet. See [docs/milestones.md](docs/milestones.md) for the roadmap.
 
 ## Why
 
@@ -44,13 +44,49 @@ Part data provided by [Rebrickable](https://rebrickable.com). Part recognition (
 
 ## Requirements
 
-- PHP 8.2+ with PDO MySQL
+- PHP 8.2+ with `pdo_mysql` and `mbstring`, and Composer
 - MySQL 8 / MariaDB 10.6+
 - A cron job for the weekly catalogue import
 - HTTPS (browsers only allow camera access on secure origins)
 - Optional: Tesseract OCR on the server for the camera features
+- Recommended: the PHP `intl` extension (locale-aware dates and numbers)
 
-Installation instructions will follow with milestone M0.
+## Installation
+
+1. Get the code and install dependencies:
+
+   ```bash
+   git clone https://github.com/Craftzone-IT/studbook.git
+   cd studbook
+   composer install --no-dev
+   ```
+
+2. Create an empty MySQL/MariaDB database (`utf8mb4`) and a user for it.
+3. Copy `.env.example` to `.env` and fill it in. Every key is documented there; the app refuses to start when a required key is missing.
+4. Create the tables and the single login:
+
+   ```bash
+   php bin/migrate
+   php bin/create-user yourname     # asks for the password (min. 10 characters)
+   ```
+
+5. Point the web server's document root to `public/` (all other folders must not be web-accessible). Requests that are not existing files go to `public/index.php`; `public/.htaccess` does this for Apache, nginx needs `try_files $uri /index.php?$query_string;`.
+6. Open the site, log in, and choose the language under **Settings**.
+
+Run `php bin/migrate` again after every update. A forgotten password is reset with `php bin/create-user yourname --reset-password`.
+
+For automatic deployment to a HestiaCP server with GitHub Actions, see [docs/deploy-hestia.md](docs/deploy-hestia.md).
+
+### Local development
+
+```bash
+composer install
+cp .env.example .env   # set APP_ENV=development, APP_URL=http://localhost:8080 and DB credentials
+php bin/migrate && php bin/create-user dev
+php -S localhost:8080 -t public public/index.php
+```
+
+Checks: `composer lint`, `php bin/check-translations`, `composer test`. Database tests run when `STUDBOOK_TEST_DB_DSN`, `STUDBOOK_TEST_DB_USER` and `STUDBOOK_TEST_DB_PASSWORD` point to a disposable test database (all its tables are dropped). Claude Code cloud sessions set this up automatically, see [docs/cloud-dev.md](docs/cloud-dev.md).
 
 ## Contributing
 

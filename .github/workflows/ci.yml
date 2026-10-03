@@ -1,0 +1,54 @@
+name: CI
+
+# Pushes to main run this via deploy.yml (workflow_call) before deploying.
+on:
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Lint and test (PHP ${{ matrix.php }})
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        php: ['8.2', '8.3']
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: studbook_test
+          MARIADB_USER: studbook
+          MARIADB_PASSWORD: studbook
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      STUDBOOK_TEST_DB_DSN: mysql:host=127.0.0.1;port=3306;dbname=studbook_test;charset=utf8mb4
+      STUDBOOK_TEST_DB_USER: studbook
+      STUDBOOK_TEST_DB_PASSWORD: studbook
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pdo_mysql, mbstring, intl
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Lint (syntax + PSR-12)
+        run: composer lint
+
+      - name: Translation health check
+        run: php bin/check-translations
+
+      - name: Tests
+        run: vendor/bin/phpunit
