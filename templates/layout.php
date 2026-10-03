@@ -32,6 +32,7 @@ $nav = [
     <title><?= e($title !== null ? $title . ' · ' . t('app.name') : t('app.name')) ?></title>
     <link rel="stylesheet" href="<?= e(url('/assets/app.css')) ?>">
     <link rel="icon" href="<?= e(url('/assets/favicon.svg')) ?>" type="image/svg+xml">
+    <script src="<?= e(url('/assets/app.js')) ?>" defer></script>
 </head>
 <body>
 <a class="skip-link" href="#main"><?= e(t('nav.skip_to_content')) ?></a>
@@ -64,7 +65,16 @@ $nav = [
 </header>
 <main id="main" class="container site-main">
     <?php foreach ($flashes as $flash) : ?>
-        <p class="flash flash-<?= e($flash['type']) ?>" role="status"><?= e($flash['message']) ?></p>
+        <div class="flash flash-<?= e($flash['type']) ?>" role="status">
+            <span><?= e($flash['message']) ?></span>
+            <?php if (($flash['undo'] ?? null) !== null) : ?>
+                <form method="post" action="<?= e(url('/batches/' . $flash['undo'] . '/undo')) ?>" class="inline-form">
+                    <input type="hidden" name="<?= e(Csrf::FIELD) ?>" value="<?= e(Csrf::token()) ?>">
+                    <input type="hidden" name="return" value="<?= e($currentPath) ?>">
+                    <button type="submit" class="link-button undo-button"><?= e(t('batch.undo')) ?></button>
+                </form>
+            <?php endif; ?>
+        </div>
     <?php endforeach; ?>
     <?= $content ?>
 </main>

@@ -10,7 +10,10 @@ use Studbook\Auth\LoginThrottle;
 use Studbook\Auth\PdoAttemptStore;
 use Studbook\Auth\UserRepository;
 use Studbook\Controller\AuthController;
-use Studbook\Controller\HomeController;
+use Studbook\Controller\BatchController;
+use Studbook\Controller\BoxController;
+use Studbook\Controller\CollectionController;
+use Studbook\Controller\ImageController;
 use Studbook\Controller\ImportController;
 use Studbook\Controller\SettingsController;
 use Studbook\Controller\SetupController;
@@ -24,6 +27,11 @@ use Studbook\Http\Url;
 use Studbook\I18n\Formatter;
 use Studbook\I18n\Lang;
 use Studbook\I18n\Translator;
+use Studbook\Catalog\CatalogRepository;
+use Studbook\Catalog\ImageCache;
+use Studbook\Owned\BatchService;
+use Studbook\Owned\OwnedQueries;
+use Studbook\Owned\OwnedService;
 use Studbook\Setup\SetupService;
 
 final class App
@@ -140,7 +148,20 @@ final class App
             fn (): Auth => $this->auth(),
             $this->config
         );
-        $home = new HomeController($this->view);
+        $owned = fn (): OwnedService => new OwnedService(
+            new BatchService($this->pdo()),
+            new OwnedQueries($this->pdo())
+        );
+        $queries = fn (): OwnedQueries => new OwnedQueries($this->pdo());
+        $catalog = fn (): CatalogRepository => new CatalogRepository($this->pdo());
+        $collections = new CollectionController($this->view, $this->config, $owned, $queries, $catalog);
+        $boxes = new BoxController($this->view, $this->config, $owned, $queries, $catalog);
+        $images = new ImageController(fn (): ImageCache => new ImageCache(
+            $this->pdo(),
+            $this->config->path('IMAGE_CACHE_PATH', 'storage/images'),
+            'Studbook (+' . $this->config->get('APP_SOURCE_URL', 'https://github.com/Craftzone-IT/studbook') . ')'
+        ));
+        $batches = new BatchController(fn (): BatchService => new BatchService($this->pdo()));
         $import = new ImportController($this->view, fn (): PDO => $this->pdo());
         $settings = new SettingsController($this->view, fn (): SettingRepository => $this->settings());
 
@@ -153,7 +174,25 @@ final class App
         $this->router->post('/setup/user', $setup->createUser(...), public: true);
         $this->router->get('/robots.txt', static fn (): Response => self::robots(), public: true);
 
-        $this->router->get('/', $home->index(...));
+        $this->router->get('/', $collections->home(...));
+        $this->router->post('/collections', $collections->create(...));
+        $this->router->get('/c/{id}', $collections->show(...));
+        $this->router->post('/c/{id}/update', $collections->update(...));
+        $this->router->post('/c/{id}/archive', $collections->archive(...));
+        $this->router->post('/c/{id}/delete', $collections->delete(...));
+        $this->router->post('/c/{id}/boxes', $collections->createBox(...));
+        $this->router->get('/c/{id}/labels', $collections->labels(...));
+        $this->router->get('/b/{id}', $boxes->show(...));
+        $this->router->post('/b/{id}/update', $boxes->update(...));
+        $this->router->post('/b/{id}/delete', $boxes->delete(...));
+        $this->router->post('/b/{id}/labels', $boxes->labels(...));
+        $this->router->get('/b/{id}/add', $boxes->addForm(...));
+        $this->router->post('/b/{id}/lots', $boxes->addLot(...));
+        $this->router->get('/b/{id}/qr.svg', $boxes->qr(...));
+        $this->router->post('/lots/{id}/take', $boxes->takeOut(...));
+        $this->router->post('/lots/{id}/move', $boxes->move(...));
+        $this->router->get('/img', $images->show(...));
+        $this->router->post('/batches/{id}/undo', $batches->undo(...));
         $this->router->get('/settings', $settings->show(...));
         $this->router->post('/settings', $settings->save(...));
         $this->router->get('/admin/import', $import->show(...));

@@ -6,7 +6,7 @@ namespace Studbook\Http;
 
 /**
  * Minimal router. Patterns use `{name}` placeholders that match one path
- * segment, e.g. `/b/{id}`. Routes are private (login required) unless
+ * segment, e.g. `/b/{id}`; `{id}` only matches digits. Routes are private (login required) unless
  * registered with `$public = true`.
  */
 final class Router
@@ -55,7 +55,8 @@ final class Router
     {
         $regex = preg_replace_callback(
             '/\\\{([a-z_][a-z0-9_]*)\\\}/i',
-            static fn (array $m): string => '(?P<' . $m[1] . '>[^/]+)',
+            // `{id}` matches digits only; other placeholders any single segment.
+            static fn (array $m): string => '(?P<' . $m[1] . '>' . ($m[1] === 'id' ? '\d+' : '[^/]+') . ')',
             preg_quote($pattern, '#')
         );
         if (!preg_match('#^' . $regex . '$#', $path, $matches)) {

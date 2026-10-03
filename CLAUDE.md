@@ -10,10 +10,10 @@ Background, decisions and their reasons: `docs/decisions.md`. Data model: `docs/
 
 ## Current status
 
-- **Phase:** M0 code merged, waiting for the first install on the host (#1). M1 in progress. Issues exist for every milestone (#1 M0 … #7 M6) plus #9 (setup wizard, done).
-- **Done:** M0 code (#8, #10), browser setup wizard (#9, `/setup`).
-- **In progress:** M1 – Catalogue importer (#2): `bin/import` (+ `--cron`), admin page *Catalogue* (`/admin/import`), BL↔RB matching, size parsing, flattened inventories. Tested end to end with real Rebrickable data (85 s); BrickLink matching tested with fixtures only.
-- **Next:** first install on the HestiaCP host (closes #1); real BrickLink files on the host to check matching; then M2 – Collections and boxes (#3).
+- **Phase:** M0 and M1 code merged; both wait for verification on the host (#1, #2). M2 in progress. Issues exist for every milestone (#1 M0 … #7 M6) plus #9 (setup wizard, done).
+- **Done:** M0 code (#8, #10), browser setup wizard (#9), M1 catalogue importer code (#12).
+- **In progress:** M2 – Collections and boxes (#3): collection cards and CRUD (archive, delete as revertible batch), boxes with Inbox, box labels, box page `/b/{id}` with add/take out/move, QR label sheet, image cache, undo journal (`batch` / `batch_change`) with an Undo button in messages.
+- **Next:** first install on the HestiaCP host (closes #1); real BrickLink files to check matching (#2); then M3 – Fast entry (#4), which adds the batch list and keyboard entry.
 - **Open questions:**
   - PHP version on the maintainer's HestiaCP host (code targets 8.2+; CI tests 8.2 and 8.3).
   - Hestia custom document root for `public/` — confirm the `v-change-web-domain-docroot` approach in `docs/deploy-hestia.md` on the real host.

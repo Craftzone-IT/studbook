@@ -48,5 +48,7 @@ final class RouterTest extends TestCase
         self::assertNull(Router::matchPattern('/b/{id}', '/b/1/2'));
         self::assertNull(Router::matchPattern('/b/{id}', '/x/b/1'));
         self::assertNull(Router::matchPattern('/a.b', '/axb'));
+        self::assertNull(Router::matchPattern('/b/{id}', '/b/5abc'));
+        self::assertSame(['slug' => '5abc'], Router::matchPattern('/b/{slug}', '/b/5abc'));
     }
 }
