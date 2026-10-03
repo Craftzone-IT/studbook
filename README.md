@@ -75,7 +75,7 @@ Part data provided by [Rebrickable](https://rebrickable.com). Part recognition (
 
 Run `php bin/migrate` again after every update. A forgotten password is reset with `php bin/create-user yourname --reset-password`.
 
-For automatic deployment to a HestiaCP server with GitHub Actions, see [docs/deploy-hestia.md](docs/deploy-hestia.md).
+Uploading over FTP to a HestiaCP server, step by step: [docs/deploy-hestia.md](docs/deploy-hestia.md).
 
 ### Local development
 

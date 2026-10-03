@@ -19,9 +19,9 @@ Issues: one per milestone, Craftzone-IT/studbook#1 (M0) to #7 (M6), created on 2
 - [ ] i18n: `t('key', [...params])`, `lang/en.php` and `lang/hu.php`, English fallback, language chosen in a Settings page and stored in `setting`. Locale-aware date and number formatting.
 - [ ] Layout: header, navigation, footer with Rebrickable attribution; responsive (desktop + 375 px phone).
 - [ ] Health check: a CLI test that every key in `en.php` exists in `hu.php` and vice versa.
-- [ ] GitHub Actions: lint + tests on PR; on push to `main`, deploy over SSH/rsync and run migrations. Secrets documented in `docs/deploy-hestia.md` (example for HestiaCP).
+- [ ] GitHub Actions: lint + tests on PR and on `main`. Deployment is manual (FTP upload + `bin/migrate` over SSH), documented in `docs/deploy-hestia.md` (example for HestiaCP).
 
-**Done when:** a fresh install from the README works, login works in both languages on desktop and phone, and a merge to `main` deploys automatically.
+**Done when:** a fresh install from the README works, login works in both languages on desktop and phone, and the manual deployment in `docs/deploy-hestia.md` has been done once on the target host.
 
 ## M1 – Catalogue importer
 

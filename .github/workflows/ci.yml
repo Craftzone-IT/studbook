@@ -1,9 +1,9 @@
 name: CI
 
-# Pushes to main run this via deploy.yml (workflow_call) before deploying.
 on:
   pull_request:
-  workflow_call:
+  push:
+    branches: [main]
 
 permissions:
   contents: read
