@@ -11,6 +11,7 @@ use Studbook\Auth\PdoAttemptStore;
 use Studbook\Auth\UserRepository;
 use Studbook\Controller\AuthController;
 use Studbook\Controller\HomeController;
+use Studbook\Controller\ImportController;
 use Studbook\Controller\SettingsController;
 use Studbook\Controller\SetupController;
 use Studbook\Database\Connection;
@@ -140,6 +141,7 @@ final class App
             $this->config
         );
         $home = new HomeController($this->view);
+        $import = new ImportController($this->view, fn (): PDO => $this->pdo());
         $settings = new SettingsController($this->view, fn (): SettingRepository => $this->settings());
 
         $this->router->get('/login', $auth->showLogin(...), public: true);
@@ -154,6 +156,8 @@ final class App
         $this->router->get('/', $home->index(...));
         $this->router->get('/settings', $settings->show(...));
         $this->router->post('/settings', $settings->save(...));
+        $this->router->get('/admin/import', $import->show(...));
+        $this->router->post('/admin/import/run', $import->run(...));
     }
 
     /** Disallow-all robots.txt; also served as a static file from `public/`. */

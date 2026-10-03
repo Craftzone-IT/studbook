@@ -4,23 +4,25 @@ Draft from planning. Column lists are indicative; the authoritative schema is wh
 
 ## Catalogue (imported, read-only)
 
-Rebuilt by the importer; never edited by hand. Internal keys are Rebrickable IDs.
+Rebuilt by the importer (`docs/catalogue-import.md`); never edited by hand. Internal keys are Rebrickable IDs. Identifier columns use `utf8mb4_bin`. No foreign keys, because the importer swaps whole tables.
 
 | Table | Purpose / key columns |
 | --- | --- |
-| `cat_part` | `rb_num` (PK), `bl_num`, `name`, `category_id`, parsed `width`, `length`, `height` (nullable) |
+| `cat_part` | `rb_num` (PK), `name`, `category_id`, `material`, `bl_num` + `bl_match` (`exact` / `alternate` / NULL), parsed `width`, `length`, `height_plates` (nullable; a brick is 3 plates) |
 | `cat_part_category` | Rebrickable part categories |
-| `cat_color` | `rb_id` (PK), `bl_id`, `name`, `rgb`, `is_trans` |
-| `cat_part_color` | part × colour pairs that actually exist (from Rebrickable elements) — drives the colour picker |
-| `cat_part_rel` | relationships between parts (print, mould, alternate, sub-part) — used for equivalence in "what can I build" |
-| `cat_theme` | themes (hierarchy) |
-| `cat_set` | `set_num` (PK), `name`, `year`, `theme_id`, `num_parts` |
-| `cat_inventory` | set → part, colour, quantity, `is_spare` (minifig inventories flattened or linked — decide in M1) |
-| `cat_image_cache` | part + colour → local file path, fetched-at; filled on first display |
+| `cat_color` | `rb_id` (PK), `name`, `rgb`, `is_trans`, `bl_id`, `bl_name` |
+| `cat_part_color` | part × colour pairs that exist (from elements and inventories) with an image URL where known; drives the colour picker and the image cache (M2) |
+| `cat_part_rel` | `rel_type` (P print, M mould, A alternate, B sub-part, R pair, T pattern), `child`, `parent` — equivalence in "what can I build" |
+| `cat_theme` | themes (hierarchy via `parent_id`) |
+| `cat_set` | `set_num` (PK), `name`, `year`, `theme_id`, `num_parts`, `img_url` |
+| `cat_minifig` | `fig_num` (PK), `name`, `num_parts`, `img_url` |
+| `cat_inventory` | flattened default inventory of every set and minifig: `set_num`, `part`, `color_id`, `is_spare`, `from_minifig`, `quantity`. Minifig parts are flattened into the set with `from_minifig = 1` (so "ignore minifigures" is a filter); sub-sets of multi-packs are flattened one level deep. |
+| `cat_bl_part`, `cat_bl_color` | the user's BrickLink lists as loaded (number, name, category, alternates; colour id, name, RGB) |
+| `cat_image_cache` | planned (M2): part + colour → local file path, fetched-at |
 | `i18n_color_name` | optional: language, colour id, translated name |
 | `search_synonym` | optional: language, term, canonical term (e.g. `kocka` → `brick`, `piros` → `red`) |
 
-BL↔RB matching: the importer fills `cat_part.bl_num` / `cat_color.bl_id` from the BrickLink catalogue files and writes a mismatch report (unmatched or ambiguous items) to the `import_run` log.
+BL↔RB matching: the importer fills `cat_part.bl_num` / `cat_color.bl_id` from the BrickLink catalogue files and writes the counts and unmatched examples to `import_run.stats` (shown on the admin page).
 
 ## Owned data
 
@@ -39,7 +41,7 @@ BL↔RB matching: the importer fills `cat_part.bl_num` / `cat_color.bl_id` from 
 | `build` | `id`, `collection_id`, `set_num`, `state` (`planned`, `in_progress`, `done`) |
 | `allocation` | `build_id`, `part`, `color`, `qty`, source: `loose_lot_id` or `owned_set_id` |
 | `batch` | `id`, `created_at`, `description`, `reverted_at` |
-| `import_run` | `id`, `started_at`, `finished_at`, `trigger` (`cron`, `manual`), `status`, `log` |
+| `import_run` | `id`, `trigger_type` (`cli`, `cron`, `manual`), `status` (`queued`, `running`, `success`, `failed`), `requested_at`, `started_at`, `finished_at`, `log`, `stats` (JSON report) |
 
 Every owned-data table carries a `batch_id`. Reverting a batch undoes all rows written in it (store enough information — e.g. a `batch_change` journal with before/after values — to revert updates and deletes, not only inserts).
 

@@ -10,13 +10,15 @@ Background, decisions and their reasons: `docs/decisions.md`. Data model: `docs/
 
 ## Current status
 
-- **Phase:** M0 – Skeleton in progress (issue Craftzone-IT/studbook#1). Issues exist for every milestone (#1 M0 … #7 M6).
-- **Done in M0 so far:** Composer/PSR-4/PSR-12/PHPUnit, front controller + router + error pages, `.env` loading with required-key check, `bin/migrate` (checksummed migrations), single-user login with session hardening, CSRF and DB-backed rate limiting, `bin/create-user`, login wall + `noindex` + `robots.txt`, i18n (`t()`, en/hu, Settings page, locale-aware formatting), responsive layout with Rebrickable attribution, `bin/check-translations`, GitHub Actions CI, manual FTP deployment guide in `docs/deploy-hestia.md`, cloud SessionStart hook.
-- **In progress:** #9 browser setup wizard (`/setup`: server checks, migrations, first login, protected by `SETUP_TOKEN`).
-- **Next:** first install on the HestiaCP host using the setup page (closes M0, #1); then M1 – Catalogue importer (#2).
+- **Phase:** M0 code merged, waiting for the first install on the host (#1). M1 in progress. Issues exist for every milestone (#1 M0 … #7 M6) plus #9 (setup wizard, done).
+- **Done:** M0 code (#8, #10), browser setup wizard (#9, `/setup`).
+- **In progress:** M1 – Catalogue importer (#2): `bin/import` (+ `--cron`), admin page *Catalogue* (`/admin/import`), BL↔RB matching, size parsing, flattened inventories. Tested end to end with real Rebrickable data (85 s); BrickLink matching tested with fixtures only.
+- **Next:** first install on the HestiaCP host (closes #1); real BrickLink files on the host to check matching; then M2 – Collections and boxes (#3).
 - **Open questions:**
   - PHP version on the maintainer's HestiaCP host (code targets 8.2+; CI tests 8.2 and 8.3).
   - Hestia custom document root for `public/` — confirm the `v-change-web-domain-docroot` approach in `docs/deploy-hestia.md` on the real host.
+  - BrickLink catalogue download format: the reader accepts tab-delimited and XML and recognises files by columns (`Number`/`Name`, `Color ID`/`Color Name`), but has not seen a real file yet. Check with the maintainer's download and adjust `src/Catalog/BrickLinkCatalog.php` if needed.
+  - How many non-print parts stay unmatched with real BrickLink data; whether a mould/print fallback via `cat_part_rel` is worth it.
   - Server-side OCR engine (Tesseract first; test on handwritten part numbers in M6).
   - Brickognize response format: which ID system, whether colour is returned (test call in M6).
 

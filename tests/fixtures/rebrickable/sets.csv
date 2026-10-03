@@ -1,0 +1,4 @@
+set_num,name,year,theme_id,num_parts,img_url
+1000-1,Police Car,2020,2,6,https://example.invalid/sets/1000-1.jpg
+1001-1,Police Pack,2020,2,12,
+1002-1,Book Without Parts,2021,1,0,

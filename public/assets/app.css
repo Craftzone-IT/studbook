@@ -340,6 +340,81 @@ a.button {
     word-break: break-all;
 }
 
+h3 {
+    font-size: 1rem;
+    margin: 20px 0 8px;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 8px;
+}
+
+.data-table th,
+.data-table td {
+    text-align: left;
+    padding: 6px 8px 6px 0;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+}
+
+.data-table thead th {
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+
+.data-table tbody th {
+    font-weight: 400;
+}
+
+.data-table .num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.table-scroll {
+    overflow-x: auto;
+}
+
+.badge {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    background: var(--bg);
+    border: 1px solid var(--border);
+}
+
+.badge-success {
+    background: var(--ok-bg);
+    color: var(--ok-text);
+    border-color: transparent;
+}
+
+.badge-failed {
+    background: var(--err-bg);
+    color: var(--err-text);
+    border-color: transparent;
+}
+
+details {
+    margin-top: 12px;
+}
+
+summary {
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.log {
+    max-height: 360px;
+    overflow-y: auto;
+    font-size: 0.8rem;
+}
+
 /* Footer */
 .site-footer {
     border-top: 1px solid var(--border);
