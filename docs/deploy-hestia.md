@@ -64,6 +64,15 @@ Pick the language under **Settings**.
 
 Command-line alternative to steps 1–4: `/usr/bin/php8.3 bin/migrate` and `/usr/bin/php8.3 bin/create-user yourname`.
 
+### Catalogue
+
+1. Add the cron job for the catalogue import (Hestia: *Cron jobs*, every 15 minutes):
+   `/usr/bin/php8.3 APP_DIR/bin/import --cron --quiet`
+2. Upload your BrickLink parts and colours lists to `APP_DIR/storage/catalog/bricklink/`.
+3. Open *Catalogue* in the app and press *Run import now*; it starts within 15 minutes.
+
+Details: [catalogue-import.md](catalogue-import.md).
+
 ## 5. Every update
 
 1. On your computer: update the clone to the latest `main` (section 2).

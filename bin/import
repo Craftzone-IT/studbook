@@ -1,0 +1,38 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+// Imports the catalogue (Rebrickable CSV downloads + your BrickLink files).
+// Usage:
+//   php bin/import          run an import now
+//   php bin/import --cron   for cron (e.g. every 15 minutes): runs an import queued from
+//                           the admin page, or a scheduled one every IMPORT_SCHEDULE_DAYS
+//   php bin/import --quiet  only print errors
+
+use Studbook\Catalog\ImportRunRepository;
+use Studbook\Catalog\ImportService;
+use Studbook\Cli\Console;
+use Studbook\Database\Connection;
+
+require dirname(__DIR__) . '/vendor/autoload.php';
+
+$args = array_slice($argv, 1);
+$quiet = in_array('--quiet', $args, true);
+$config = Console::config();
+$pdo = Connection::fromConfig($config);
+$service = new ImportService($pdo, $config, new ImportRunRepository($pdo));
+$output = static function (string $line) use ($quiet): void {
+    if (!$quiet || str_contains($line, 'ERROR')) {
+        Console::out($line);
+    }
+};
+
+ini_set('memory_limit', '512M');
+set_time_limit(0);
+
+$status = in_array('--cron', $args, true)
+    ? $service->cron($output)
+    : $service->runNow('cli', $output);
+
+exit($status === ImportRunRepository::FAILED ? 1 : 0);

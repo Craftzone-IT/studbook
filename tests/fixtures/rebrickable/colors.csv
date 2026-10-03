@@ -1,0 +1,8 @@
+id,name,rgb,is_trans,num_parts,num_sets,y1,y2
+-1,[Unknown],0033B2,False,1,1,2000,2000
+0,Black,05131D,False,10,10,1957,2026
+4,Red,C91A09,False,10,10,1957,2026
+71,Light Bluish Gray,A0A5A9,False,10,10,2003,2026
+47,Trans-Clear,FCFCFC,True,10,10,1957,2026
+9999,[No Color/Any Color],05131D,False,1,1,1957,2026
+1000,Imaginary Sparkle,ABCDEF,False,1,1,2020,2020

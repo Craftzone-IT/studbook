@@ -56,6 +56,14 @@ Record of product and technical decisions made during planning (October 2026). A
 - Backups: HestiaCP's built-in backup is sufficient (catalogue data can always be re-imported).
 - Development on GitHub; code written by Claude Code; issue → PR → review → merge. ~~Automatic deploy via GitHub Actions.~~ Superseded 2026-10-03: deployment is manual (see below).
 
+## M1 catalogue import (2026-10-03)
+
+- **No BrickLink IDs in Rebrickable's CSVs.** The downloads carry no external IDs, so BL numbers are matched locally: colours by normalised name (Rebrickable uses BrickLink's names almost everywhere), parts by identical number and then BrickLink's alternate item numbers. Ambiguous matches are not guessed. Prints usually stay unmatched; showing the BL number of the unprinted parent is left for later. Rebrickable's API would give exact external IDs but needs a per-user key; not used for now.
+- **Inventories:** default inventory = lowest version. Minifig parts are flattened into the set with `from_minifig = 1`; sub-sets of multi-packs are flattened one level deep.
+- **Heights are stored in plates** (`height_plates`), so bricks, plates and fractional bricks (2/3, 1 1/3) are whole numbers.
+- **Imports run from cron only.** "Run import now" queues a run; `bin/import --cron` (every 15 minutes) runs queued imports and the weekly one. A web request would hit PHP time limits on shared hosting (an import takes ~1.5 minutes). The admin page warns when the cron job is not running.
+- **Atomic swap:** `*_new` tables + one `RENAME TABLE`; no foreign keys on catalogue tables.
+
 ## M0 implementation (2026-10-03)
 
 - **No runtime dependencies** besides PHP extensions: own small router, `.env` parser and migrator instead of a framework. Fewer moving parts on shared hosting; dev dependencies are PHPUnit and PHP_CodeSniffer only.
