@@ -491,6 +491,14 @@ final class CatalogImporter
 
         $rows = (int) $this->pdo->query('SELECT COUNT(*) FROM cat_inventory_new')->fetchColumn();
         ($this->log)(sprintf('Flattened inventory rows: %d', $rows));
+
+        // Popularity = number of sets a part appears in; ranks search results and pickers.
+        $this->pdo->exec(
+            "UPDATE cat_part_new p
+             JOIN (SELECT part, COUNT(DISTINCT set_num) AS n FROM cat_inventory_new
+                   WHERE set_num NOT LIKE 'fig-%' GROUP BY part) x ON x.part = p.rb_num
+             SET p.popularity = x.n"
+        );
     }
 
     private static function isPrintOrSticker(string $num, string $name): bool

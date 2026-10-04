@@ -8,7 +8,7 @@ Rebuilt by the importer (`docs/catalogue-import.md`); never edited by hand. Inte
 
 | Table | Purpose / key columns |
 | --- | --- |
-| `cat_part` | `rb_num` (PK), `name`, `category_id`, `material`, `bl_num` + `bl_match` (`api` / `exact` / `alternate` / NULL), parsed `width`, `length`, `height_plates` (nullable; a brick is 3 plates) |
+| `cat_part` | `rb_num` (PK), `name`, `category_id`, `material`, `bl_num` + `bl_match` (`api` / `exact` / `alternate` / NULL), parsed `width`, `length`, `height_plates` (nullable; a brick is 3 plates), `popularity` (number of sets, not minifigs, the part appears in; ranks search and picker results) |
 | `cat_part_category` | Rebrickable part categories |
 | `cat_color` | `rb_id` (PK), `name`, `rgb`, `is_trans`, `bl_id`, `bl_name` |
 | `cat_part_color` | part × colour pairs that exist (from elements and inventories) with an image URL where known; drives the colour picker and the image cache (M2) |
@@ -20,7 +20,7 @@ Rebuilt by the importer (`docs/catalogue-import.md`); never edited by hand. Inte
 | `cat_bl_part`, `cat_bl_color` | the user's BrickLink lists as loaded (number, name, category, alternates; colour id, name, RGB) |
 | `cat_image_cache` | planned (M2): part + colour → local file path, fetched-at |
 | `i18n_color_name` | optional: language, colour id, translated name |
-| `search_synonym` | optional: language, term, canonical term (e.g. `kocka` → `brick`, `piros` → `red`) |
+| `search_synonym` | `term` (PK, `utf8mb4_bin` so `kerek` and `kerék` stay different), `canonical` (one or more English words), `language`; seeded by migration 0004 (e.g. `kocka` → `brick`, `kékesszürke` → `bluish gray`). Not touched by the importer. |
 
 BL↔RB matching: the importer fills `cat_part.bl_num` / `cat_color.bl_id` from the BrickLink catalogue files and writes the counts and unmatched examples to `import_run.stats` (shown on the admin page).
 
@@ -44,6 +44,8 @@ BL↔RB matching: the importer fills `cat_part.bl_num` / `cat_color.bl_id` from 
 | `batch_change` | journal: `batch_id`, `table_name`, `row_id`, `action` (`insert`, `update`, `delete`), `before_data`, `after_data` (JSON rows) |
 | `import_run` | `id`, `trigger_type` (`cli`, `cron`, `manual`), `status` (`queued`, `running`, `success`, `failed`), `requested_at`, `started_at`, `finished_at`, `log`, `stats` (JSON report) |
 | `cat_image_cache` | `part`, `color_id` (−1 = any colour), `file`, `content_type`, `status` (`ok`, `missing`, `error`), `fetched_at` |
+
+**Entry sessions:** fast entry (M3) writes all additions to one box into one batch (`description_key` `batch.entry_session`, params `box`, `box_id`, `lots`, `parts`) until the user leaves the box for 30 minutes or the session is undone; `BatchService::append` adds to it under a row lock and refuses a reverted batch.
 
 **Undo:** every owned-data table carries `batch_id` (the batch that last wrote the row). All writes go through `Studbook\Owned\Batch`, which also journals the row before and after in `batch_change`. Reverting a batch replays the journal newest first: inserted rows are deleted, updated rows restored, deleted rows re-inserted with their old id. A revert is refused when a later batch changed one of the rows (its `batch_id` is no longer this batch, or a deleted row exists again), so a revert never overwrites newer changes.
 

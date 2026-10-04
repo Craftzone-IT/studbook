@@ -66,16 +66,22 @@ final class CatalogRepository
         return $parts;
     }
 
-    /** @return list<array{id: int, name: string, rgb: string}> colours the part exists in */
+    /**
+     * Colours the part exists in, the most common (in the most sets) first.
+     *
+     * @return list<array{id: int, name: string, rgb: string}>
+     */
     public function colorsForPart(string $rbNum): array
     {
         $stmt = $this->pdo->prepare(
             'SELECT c.rb_id, c.name, c.bl_name, c.rgb FROM cat_part_color pc
              JOIN cat_color c ON c.rb_id = pc.color_id
+             LEFT JOIN (SELECT color_id, COUNT(*) AS n FROM cat_inventory WHERE part = ? GROUP BY color_id) u
+               ON u.color_id = pc.color_id
              WHERE pc.part = ? AND c.rb_id >= 0
-             ORDER BY COALESCE(c.bl_name, c.name)'
+             ORDER BY COALESCE(u.n, 0) DESC, COALESCE(c.bl_name, c.name)'
         );
-        $stmt->execute([$rbNum]);
+        $stmt->execute([$rbNum, $rbNum]);
 
         return array_map(self::color(...), $stmt->fetchAll(PDO::FETCH_ASSOC));
     }
@@ -91,6 +97,33 @@ final class CatalogRepository
         }
 
         return $colors;
+    }
+
+    /**
+     * Search words that map to colour words (e.g. Hungarian "piros" → "red"),
+     * so the colour filter on the entry page understands them too.
+     *
+     * @return array<string, string>
+     */
+    public function colorSynonyms(): array
+    {
+        $words = [];
+        foreach ($this->pdo->query('SELECT name, bl_name FROM cat_color')->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            preg_match_all('/[a-z]+/', strtolower($row['name'] . ' ' . $row['bl_name']), $m);
+            foreach ($m[0] as $w) {
+                $words[$w] = true;
+            }
+        }
+        $result = [];
+        $rows = $this->pdo->query('SELECT term, canonical FROM search_synonym')->fetchAll(PDO::FETCH_KEY_PAIR);
+        foreach ($rows as $term => $canonical) {
+            $parts = explode(' ', (string) $canonical);
+            if (array_filter($parts, static fn (string $p): bool => !isset($words[$p])) === []) {
+                $result[mb_strtolower((string) $term)] = (string) $canonical;
+            }
+        }
+
+        return $result;
     }
 
     public function isEmpty(): bool

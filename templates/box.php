@@ -27,7 +27,13 @@ $img = static fn (string $part, int $color): string => url('/img') . '?part=' . 
 </div>
 
 <section class="card setup-step">
-    <h2><?= e(t('box.add_here')) ?></h2>
+    <div class="section-head">
+        <h2><?= e(t('box.add_here')) ?></h2>
+        <span>
+            <a class="button button-primary" href="<?= e(url('/b/' . $id . '/entry')) ?>"><?= e(t('entry.open')) ?></a>
+            <a class="button" href="<?= e(url('/b/' . $id . '/pick')) ?>"><?= e(t('picker.open')) ?></a>
+        </span>
+    </div>
     <?php if ($labels !== []) : ?>
         <ul class="tile-list">
             <?php foreach ($labels as $part) : ?>
@@ -51,47 +57,7 @@ $img = static fn (string $part, int $color): string => url('/img') . '?part=' . 
 
 <section class="card setup-step">
     <h2><?= e(t('box.contents')) ?></h2>
-    <?php if ($lots === []) : ?>
-        <p><?= e(t('box.empty')) ?></p>
-    <?php else : ?>
-        <ul class="lot-list">
-            <?php foreach ($lots as $lot) : ?>
-                <li class="lot">
-                    <img class="part-img" src="<?= e($img((string) $lot['part'], (int) $lot['color_id'])) ?>" alt="" width="48" height="48" loading="lazy">
-                    <div class="lot-main">
-                        <strong><?= e($lot['bl_num'] ?? $lot['part']) ?></strong>
-                        <?= swatch((string) ($lot['rgb'] ?? '')) ?>
-                        <?= e($lot['color_name'] ?? ('#' . $lot['color_id'])) ?>
-                        <span class="lot-name"><?= e($lot['part_name'] ?? '') ?></span>
-                    </div>
-                    <div class="lot-qty"><?= e($fmt->number((int) $lot['qty'])) ?></div>
-                    <details class="lot-actions">
-                        <summary><?= e(t('box.actions')) ?></summary>
-                        <form method="post" action="<?= e(url('/lots/' . $lot['id'] . '/take')) ?>" class="form-inline">
-                            <?= $csrf ?>
-                            <label for="take-<?= e($lot['id']) ?>"><?= e(t('box.take_out')) ?></label>
-                            <input id="take-<?= e($lot['id']) ?>" name="qty" type="number" min="1" max="<?= e($lot['qty']) ?>" value="1" inputmode="numeric">
-                            <button type="submit" class="button"><?= e(t('box.take_out_submit')) ?></button>
-                        </form>
-                        <?php if ($otherBoxes !== []) : ?>
-                            <form method="post" action="<?= e(url('/lots/' . $lot['id'] . '/move')) ?>" class="form-inline">
-                                <?= $csrf ?>
-                                <label for="move-qty-<?= e($lot['id']) ?>"><?= e(t('box.move')) ?></label>
-                                <input id="move-qty-<?= e($lot['id']) ?>" name="qty" type="number" min="1" max="<?= e($lot['qty']) ?>" value="<?= e($lot['qty']) ?>" inputmode="numeric">
-                                <label for="move-to-<?= e($lot['id']) ?>" class="visually-hidden"><?= e(t('box.move_to')) ?></label>
-                                <select id="move-to-<?= e($lot['id']) ?>" name="target">
-                                    <?php foreach ($otherBoxes as $other) : ?>
-                                        <option value="<?= e($other['id']) ?>"><?= e($other['name']) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <button type="submit" class="button"><?= e(t('box.move_submit')) ?></button>
-                            </form>
-                        <?php endif; ?>
-                    </details>
-                </li>
-            <?php endforeach; ?>
-        </ul>
-    <?php endif; ?>
+    <?php require __DIR__ . '/_lots.php'; ?>
 </section>
 
 <section class="card setup-step">

@@ -13,6 +13,10 @@ use Studbook\Controller\AuthController;
 use Studbook\Controller\BatchController;
 use Studbook\Controller\BoxController;
 use Studbook\Controller\CollectionController;
+use Studbook\Controller\EntryController;
+use Studbook\Controller\HistoryController;
+use Studbook\Controller\PickerController;
+use Studbook\Controller\SearchController;
 use Studbook\Controller\ImageController;
 use Studbook\Controller\ImportController;
 use Studbook\Controller\SettingsController;
@@ -29,6 +33,7 @@ use Studbook\I18n\Lang;
 use Studbook\I18n\Translator;
 use Studbook\Catalog\CatalogRepository;
 use Studbook\Catalog\ImageCache;
+use Studbook\Catalog\PartSearch;
 use Studbook\Owned\BatchService;
 use Studbook\Owned\OwnedQueries;
 use Studbook\Owned\OwnedService;
@@ -162,6 +167,14 @@ final class App
             'Studbook (+' . $this->config->get('APP_SOURCE_URL', 'https://github.com/Craftzone-IT/studbook') . ')'
         ));
         $batches = new BatchController(fn (): BatchService => new BatchService($this->pdo()));
+        $search = fn (): PartSearch => new PartSearch(
+            $this->pdo(),
+            $this->config->path('STORAGE_PATH', 'storage') . '/cache'
+        );
+        $entry = new EntryController($this->view, $owned, $queries, $catalog, $search);
+        $searchPage = new SearchController($this->view, $search, $queries);
+        $picker = new PickerController($this->view, fn (): PDO => $this->pdo(), $queries);
+        $history = new HistoryController($this->view, fn (): BatchService => new BatchService($this->pdo()));
         $import = new ImportController($this->view, fn (): PDO => $this->pdo());
         $settings = new SettingsController($this->view, fn (): SettingRepository => $this->settings());
 
@@ -191,6 +204,13 @@ final class App
         $this->router->get('/b/{id}/qr.svg', $boxes->qr(...));
         $this->router->post('/lots/{id}/take', $boxes->takeOut(...));
         $this->router->post('/lots/{id}/move', $boxes->move(...));
+        $this->router->get('/b/{id}/entry', $entry->page(...));
+        $this->router->post('/b/{id}/entry', $entry->add(...));
+        $this->router->get('/b/{id}/entry/part', $entry->part(...));
+        $this->router->get('/b/{id}/entry/search', $entry->search(...));
+        $this->router->get('/b/{id}/pick', $picker->page(...));
+        $this->router->get('/search', $searchPage->page(...));
+        $this->router->get('/history', $history->page(...));
         $this->router->get('/img', $images->show(...));
         $this->router->post('/batches/{id}/undo', $batches->undo(...));
         $this->router->get('/settings', $settings->show(...));
