@@ -8,7 +8,7 @@ Rebuilt by the importer (`docs/catalogue-import.md`); never edited by hand. Inte
 
 | Table | Purpose / key columns |
 | --- | --- |
-| `cat_part` | `rb_num` (PK), `name`, `category_id`, `material`, `bl_num` + `bl_match` (`exact` / `alternate` / NULL), parsed `width`, `length`, `height_plates` (nullable; a brick is 3 plates) |
+| `cat_part` | `rb_num` (PK), `name`, `category_id`, `material`, `bl_num` + `bl_match` (`api` / `exact` / `alternate` / NULL), parsed `width`, `length`, `height_plates` (nullable; a brick is 3 plates) |
 | `cat_part_category` | Rebrickable part categories |
 | `cat_color` | `rb_id` (PK), `name`, `rgb`, `is_trans`, `bl_id`, `bl_name` |
 | `cat_part_color` | part × colour pairs that exist (from elements and inventories) with an image URL where known; drives the colour picker and the image cache (M2) |

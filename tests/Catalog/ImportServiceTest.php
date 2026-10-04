@@ -78,6 +78,28 @@ final class ImportServiceTest extends DatabaseTestCase
         self::assertNull($this->runs->nextQueued());
     }
 
+    public function testUnreachableApiDoesNotStopTheImport(): void
+    {
+        $service = new ImportService($this->pdo, new Config([
+            'APP_URL' => 'https://studbook.test',
+            'APP_ENV' => 'production',
+            'DB_HOST' => 'x',
+            'DB_NAME' => 'x',
+            'DB_USER' => 'x',
+            'DB_PASSWORD' => '',
+            'REBRICKABLE_DOWNLOAD_BASE' => 'http://127.0.0.1:1/',
+            'REBRICKABLE_API_KEY' => 'secret',
+            'REBRICKABLE_API_BASE' => 'https://127.0.0.1:1/api/v3/',
+            'CATALOG_DOWNLOAD_PATH' => $this->dir,
+            'BRICKLINK_FILES_PATH' => dirname(__DIR__) . '/fixtures/bricklink',
+        ], dirname(__DIR__, 2)), $this->runs);
+
+        self::assertSame(ImportRunRepository::SUCCESS, $service->runNow('cli', static fn () => null));
+        $run = $this->runs->latest(1)[0];
+        self::assertStringContainsString('WARNING Rebrickable API api_parts failed', (string) $run['log']);
+        self::assertSame(2, $run['stats']['parts']['matched_exact']);
+    }
+
     public function testFailedRunIsRecorded(): void
     {
         unlink($this->dir . '/parts.csv.gz');

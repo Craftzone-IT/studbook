@@ -58,6 +58,7 @@ nano .env
 #   DB_NAME / DB_USER / DB_PASSWORD from step 1.3
 #   TRUSTED_PROXIES = the NPMplus IP (127.0.0.1 if it runs on the same machine)
 #   SETUP_TOKEN = output of: openssl rand -hex 16
+#   REBRICKABLE_API_KEY = your own key from rebrickable.com → Settings → API (recommended)
 mkdir -p storage
 chown -R USER:USER .
 chmod 600 .env

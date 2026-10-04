@@ -46,6 +46,7 @@ final class CatalogImporter
 
     /** @var \Closure(string): void */
     private \Closure $log;
+    private bool $apiAvailable = false;
 
     /** @param callable(string): void $log */
     public function __construct(private readonly PDO $pdo, callable $log)
@@ -55,15 +56,22 @@ final class CatalogImporter
 
     /**
      * @param array<string, string> $files Rebrickable file key => local path
+     * @param array<string, list<string>> $apiParts BrickLink ids per part from the Rebrickable API
+     * @param array<string, array{ids: list<int>, names: list<string>}> $apiColors BrickLink ids per colour
      * @return array<string, mixed> statistics for the import report
      */
-    public function import(array $files, BrickLinkCatalog $bricklink): array
-    {
+    public function import(
+        array $files,
+        BrickLinkCatalog $bricklink,
+        array $apiParts = [],
+        array $apiColors = [],
+    ): array {
         foreach (RebrickableDownloader::FILES as $key) {
             if (!isset($files[$key])) {
                 throw new ImportException(sprintf('Rebrickable file %s is missing', $key));
             }
         }
+        $this->apiAvailable = $apiParts !== [] || $apiColors !== [];
         $this->prepareTables();
         try {
             $stats = ['counts' => []];
@@ -72,9 +80,10 @@ final class CatalogImporter
             $partMatcher = new PartMatcher($bricklink->parts);
 
             $this->loadThemes($files['themes']);
-            $stats['colors'] = $this->loadColors($files['colors'], $colorMatcher);
+            $stats['colors'] = $this->loadColors($files['colors'], $colorMatcher, $apiColors, $bricklink);
             $this->loadCategories($files['part_categories']);
-            $stats['parts'] = $this->loadParts($files['parts'], $partMatcher);
+            $stats['parts'] = $this->loadParts($files['parts'], $partMatcher, $apiParts);
+            $stats['api'] = ['parts' => count($apiParts), 'colors' => count($apiColors)];
             $this->loadRelationships($files['part_relationships']);
             $this->loadSets($files['sets']);
             $this->loadMinifigs($files['minifigs']);
@@ -158,7 +167,7 @@ final class CatalogImporter
         foreach ($bricklink->warnings as $warning) {
             ($this->log)('WARNING ' . $warning);
         }
-        if ($bricklink->parts === [] || $bricklink->colors === []) {
+        if (($bricklink->parts === [] || $bricklink->colors === []) && !$this->apiAvailable) {
             ($this->log)('WARNING No BrickLink parts and/or colours list found; BrickLink numbers stay empty. '
                 . 'See docs/catalogue-import.md.');
         }
@@ -180,18 +189,36 @@ final class CatalogImporter
         ($this->log)(sprintf('Themes: %d', $insert->flush()));
     }
 
-    /** @return array<string, mixed> */
-    private function loadColors(string $path, ColorMatcher $matcher): array
-    {
+    /**
+     * @param array<string, array{ids: list<int>, names: list<string>}> $apiColors
+     * @return array<string, mixed>
+     */
+    private function loadColors(
+        string $path,
+        ColorMatcher $matcher,
+        array $apiColors,
+        BrickLinkCatalog $bricklink
+    ): array {
         $insert = new BulkInserter(
             $this->pdo,
             'cat_color_new',
             ['rb_id', 'name', 'rgb', 'is_trans', 'bl_id', 'bl_name']
         );
         $matched = 0;
+        $matchedApi = 0;
         $unmatched = [];
         foreach (CsvReader::rows($path, ['id', 'name', 'rgb', 'is_trans']) as $row) {
-            $match = $matcher->match($row['name'], $row['rgb']);
+            $api = $apiColors[$row['id']] ?? null;
+            if ($api !== null) {
+                $blId = $api['ids'][0];
+                $match = [
+                    'bl_id' => $blId,
+                    'bl_name' => $bricklink->colors[$blId]['name'] ?? ($api['names'][0] ?? null),
+                ];
+                $matchedApi++;
+            } else {
+                $match = $matcher->match($row['name'], $row['rgb']);
+            }
             if ($match !== null) {
                 $matched++;
             } elseif ((int) $row['id'] >= 0) {
@@ -214,7 +241,7 @@ final class CatalogImporter
             count($unmatched)
         ));
 
-        return ['total' => $total, 'matched' => $matched, 'unmatched' => $unmatched];
+        return ['total' => $total, 'matched' => $matched, 'matched_api' => $matchedApi, 'unmatched' => $unmatched];
     }
 
     private function loadCategories(string $path): void
@@ -226,13 +253,16 @@ final class CatalogImporter
         ($this->log)(sprintf('Part categories: %d', $insert->flush()));
     }
 
-    /** @return array<string, mixed> */
-    private function loadParts(string $path, PartMatcher $matcher): array
+    /**
+     * @param array<string, list<string>> $apiParts
+     * @return array<string, mixed>
+     */
+    private function loadParts(string $path, PartMatcher $matcher, array $apiParts): array
     {
         $insert = new BulkInserter($this->pdo, 'cat_part_new', [
             'rb_num', 'name', 'category_id', 'material', 'bl_num', 'bl_match', 'width', 'length', 'height_plates',
         ]);
-        $byMethod = [PartMatcher::EXACT => 0, PartMatcher::ALTERNATE => 0];
+        $byMethod = [PartMatcher::API => 0, PartMatcher::EXACT => 0, PartMatcher::ALTERNATE => 0];
         $unmatched = 0;
         $unmatchedByCategory = [];
         $samples = [];
@@ -242,7 +272,10 @@ final class CatalogImporter
             if ($num === '' || strlen($num) > 64) {
                 continue;
             }
-            $match = $matcher->match($num);
+            $apiIds = $apiParts[$num] ?? null;
+            $match = $apiIds !== null && strlen($apiIds[0]) <= 64
+                ? ['bl_num' => $apiIds[0], 'method' => PartMatcher::API]
+                : $matcher->match($num);
             if ($match !== null) {
                 $byMethod[$match['method']]++;
             } else {
@@ -273,8 +306,10 @@ final class CatalogImporter
         $total = $insert->flush();
         arsort($unmatchedByCategory);
         ($this->log)(sprintf(
-            'Parts: %d, BrickLink match: %d exact, %d via alternate number, %d unmatched; %d with parsed size',
+            'Parts: %d, BrickLink match: %d via Rebrickable API, %d exact, %d via alternate number, %d unmatched; '
+            . '%d with parsed size',
             $total,
+            $byMethod[PartMatcher::API],
             $byMethod[PartMatcher::EXACT],
             $byMethod[PartMatcher::ALTERNATE],
             $unmatched,
@@ -283,6 +318,7 @@ final class CatalogImporter
 
         return [
             'total' => $total,
+            'matched_api' => $byMethod[PartMatcher::API],
             'matched_exact' => $byMethod[PartMatcher::EXACT],
             'matched_alternate' => $byMethod[PartMatcher::ALTERNATE],
             'unmatched' => $unmatched,
