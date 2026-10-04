@@ -229,6 +229,58 @@ final class OwnedService
         return $this->batches->run('batch.parts_added', $params, $work)[1];
     }
 
+    /**
+     * Adds parts as part of an entry session: all additions to one box in a
+     * session form one batch, so the whole session can be undone at once.
+     * Starts a new session batch when `$sessionBatch` is null, reverted or gone.
+     *
+     * @return array{batch: int, lots: int, parts: int} the session batch and its running totals
+     */
+    public function addLotInSession(int $storageId, string $part, int $colorId, int $qty, ?int $sessionBatch): array
+    {
+        $box = $this->requireBox($storageId);
+        $qty = self::quantity($qty);
+        $work = function (Batch $b) use ($box, $part, $colorId, $qty): void {
+            $this->putLot($b, (int) $box['collection_id'], (int) $box['id'], $part, $colorId, $qty);
+        };
+        $current = $sessionBatch !== null ? $this->entrySession($sessionBatch, (int) $box['id']) : null;
+        if ($current !== null) {
+            $params = $this->batches->find($current['batch'])['description_params'] ?? [];
+            $params['lots'] = $current['lots'] + 1;
+            $params['parts'] = $current['parts'] + $qty;
+            if ($this->batches->append($current['batch'], $params, $work)) {
+                return ['batch' => $current['batch'], 'lots' => $params['lots'], 'parts' => $params['parts']];
+            }
+        }
+        $params = ['box' => (string) $box['name'], 'box_id' => (int) $box['id'], 'lots' => 1, 'parts' => $qty];
+        [, $batch] = $this->batches->run('batch.entry_session', $params, $work);
+
+        return ['batch' => $batch, 'lots' => 1, 'parts' => $qty];
+    }
+
+    /**
+     * The open entry session batch of a box: null when it is missing, was reverted or belongs elsewhere.
+     *
+     * @return array{batch: int, lots: int, parts: int}|null
+     */
+    public function entrySession(int $batchId, int $storageId): ?array
+    {
+        $batch = $this->batches->find($batchId);
+        if (
+            $batch === null || $batch['reverted_at'] !== null
+            || $batch['description_key'] !== 'batch.entry_session'
+            || (int) ($batch['description_params']['box_id'] ?? 0) !== $storageId
+        ) {
+            return null;
+        }
+
+        return [
+            'batch' => $batchId,
+            'lots' => (int) ($batch['description_params']['lots'] ?? 0),
+            'parts' => (int) ($batch['description_params']['parts'] ?? 0),
+        ];
+    }
+
     /** Takes parts out of a lot; the lot disappears when it reaches zero. */
     public function takeOut(int $lotId, int $qty): int
     {

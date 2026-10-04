@@ -134,6 +134,57 @@ final class OwnedQueries
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    /**
+     * Boxes of a collection whose label lists the part ("where does this go?").
+     *
+     * @return list<array{id: int, name: string}>
+     */
+    public function labelledBoxes(int $collectionId, string $part): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT b.id, b.name FROM storage_label l JOIN storage b ON b.id = l.storage_id
+             WHERE b.collection_id = ? AND l.part = ? ORDER BY b.name'
+        );
+        $stmt->execute([$collectionId, $part]);
+
+        return array_map(
+            static fn (array $r): array => ['id' => (int) $r['id'], 'name' => (string) $r['name']],
+            $stmt->fetchAll(PDO::FETCH_ASSOC)
+        );
+    }
+
+    /**
+     * Where parts are kept: loose quantities per box, across all collections.
+     *
+     * @param list<string> $parts
+     * @return array<string, list<array{box_id: int, box: string, collection: string, qty: int}>>
+     */
+    public function locations(array $parts): array
+    {
+        if ($parts === []) {
+            return [];
+        }
+        $stmt = $this->pdo->prepare(sprintf(
+            'SELECT l.part, b.id AS box_id, b.name AS box, c.name AS collection, SUM(l.qty) AS qty
+             FROM loose_lot l JOIN storage b ON b.id = l.storage_id JOIN collection c ON c.id = l.collection_id
+             WHERE l.part IN (%s) AND c.archived_at IS NULL
+             GROUP BY l.part, b.id, b.name, c.name ORDER BY c.name, b.name',
+            implode(',', array_fill(0, count($parts), '?'))
+        ));
+        $stmt->execute(array_values($parts));
+        $result = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $result['p:' . $row['part']][] = [
+                'box_id' => (int) $row['box_id'],
+                'box' => (string) $row['box'],
+                'collection' => (string) $row['collection'],
+                'qty' => (int) $row['qty'],
+            ];
+        }
+
+        return $result;
+    }
+
     /** BrickLink number of a part when known, otherwise the Rebrickable number. */
     public function partDisplay(string $rbNum): string
     {

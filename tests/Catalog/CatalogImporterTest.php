@@ -80,6 +80,9 @@ final class CatalogImporterTest extends DatabaseTestCase
         ], $this->inventory('1001-1'));
 
         self::assertCount(2, $this->inventory('fig-000001'));
+        // 3001 is in 1000-1 and (through the car) in 1001-1; minifig inventories do not count.
+        self::assertSame(2, (int) $this->row("SELECT popularity FROM cat_part WHERE rb_num = '3001'")['popularity']);
+        self::assertSame(0, (int) $this->row("SELECT popularity FROM cat_part WHERE rb_num = '3794b'")['popularity']);
         self::assertSame([], $this->inventory('1002-1'));
     }
 

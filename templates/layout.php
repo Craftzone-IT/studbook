@@ -19,6 +19,8 @@ $currentPath ??= '/';
 $flashes ??= [];
 $nav = [
     '/' => 'nav.home',
+    '/search' => 'nav.search',
+    '/history' => 'nav.history',
     '/admin/import' => 'nav.import',
     '/settings' => 'nav.settings',
 ];

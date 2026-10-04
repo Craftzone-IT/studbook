@@ -143,11 +143,15 @@ final class BoxController
             return Response::redirect(url('/b/' . $box['id']));
         }
 
+        $labelled = ($this->queries)()->labelledBoxes((int) $box['collection_id'], $part['rb_num']);
+        $hint = in_array((int) $box['id'], array_column($labelled, 'id'), true) ? [] : $labelled;
+
         return Response::html($this->view->render('box-add', [
             'title' => t('box.add_title', ['part' => $part['display']]),
             'box' => $box,
             'part' => $part,
             'colors' => ($this->catalog)()->colorsForPart($part['rb_num']),
+            'hint' => $hint,
         ]));
     }
 

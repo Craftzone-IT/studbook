@@ -1,0 +1,115 @@
+-- M3: search support.
+-- cat_part.popularity = number of sets (not minifigs) a part appears in; filled by the importer
+-- (and once here from the current catalogue, so ranking and the picker work before the next import),
+-- used to rank search results, picker lists and colours.
+-- search_synonym maps words people type (Hungarian, spelling variants) to the English
+-- catalogue vocabulary. Colour words map to BrickLink colour-name words. Terms are compared
+-- exactly (kerek = round, kerék = wheel); the search code also accepts a term typed without
+-- accents when that is unambiguous, so `lejto` finds `lejtő` without a separate row.
+
+ALTER TABLE cat_part ADD COLUMN popularity INT NOT NULL DEFAULT 0, ADD KEY idx_cat_part_popularity (popularity);
+
+UPDATE cat_part p
+JOIN (
+    SELECT part, COUNT(DISTINCT set_num) AS n FROM cat_inventory WHERE set_num NOT LIKE 'fig-%' GROUP BY part
+) x ON x.part = p.rb_num
+SET p.popularity = x.n;
+
+CREATE TABLE search_synonym (
+    term VARCHAR(64) COLLATE utf8mb4_bin NOT NULL PRIMARY KEY,
+    canonical VARCHAR(100) NOT NULL,
+    language CHAR(2) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO search_synonym (term, canonical, language) VALUES
+('grey', 'gray', 'en'),
+('colour', 'color', 'en'),
+('transparent', 'trans', 'en'),
+('kocka', 'brick', 'hu'),
+('tégla', 'brick', 'hu'),
+('lap', 'plate', 'hu'),
+('lapka', 'plate', 'hu'),
+('csempe', 'tile', 'hu'),
+('sima', 'tile', 'hu'),
+('lejtő', 'slope', 'hu'),
+('tető', 'slope', 'hu'),
+('ferde', 'slope', 'hu'),
+('ív', 'arch', 'hu'),
+('boltív', 'arch', 'hu'),
+('kerek', 'round', 'hu'),
+('kör', 'round', 'hu'),
+('ívelt', 'curved', 'hu'),
+('hajlított', 'curved', 'hu'),
+('ék', 'wedge', 'hu'),
+('panel', 'panel', 'hu'),
+('ablak', 'window', 'hu'),
+('ajtó', 'door', 'hu'),
+('kerék', 'wheel', 'hu'),
+('gumi', 'tyre', 'hu'),
+('tengely', 'axle', 'hu'),
+('csap', 'pin', 'hu'),
+('fogaskerék', 'gear', 'hu'),
+('gerenda', 'beam', 'hu'),
+('zsanér', 'hinge', 'hu'),
+('pánt', 'hinge', 'hu'),
+('kúp', 'cone', 'hu'),
+('henger', 'cylinder', 'hu'),
+('kupola', 'dome', 'hu'),
+('virág', 'flower', 'hu'),
+('levél', 'leaf', 'hu'),
+('fej', 'head', 'hu'),
+('láb', 'legs', 'hu'),
+('törzs', 'torso', 'hu'),
+('haj', 'hair', 'hu'),
+('kalap', 'hat', 'hu'),
+('sisak', 'helmet', 'hu'),
+('minifigura', 'minifig', 'hu'),
+('figura', 'minifig', 'hu'),
+('matrica', 'sticker', 'hu'),
+('mintás', 'print', 'hu'),
+('nyomott', 'print', 'hu'),
+('bütyök', 'stud', 'hu'),
+('bütyköt', 'stud', 'hu'),
+('lyuk', 'hole', 'hu'),
+('lyukkal', 'hole', 'hu'),
+('fordított', 'inverted', 'hu'),
+('dupla', 'double', 'hu'),
+('sarok', 'corner', 'hu'),
+('alaplap', 'baseplate', 'hu'),
+('kerítés', 'fence', 'hu'),
+('létra', 'ladder', 'hu'),
+('rúd', 'bar', 'hu'),
+('klipsz', 'clip', 'hu'),
+('piros', 'red', 'hu'),
+('vörös', 'red', 'hu'),
+('kék', 'blue', 'hu'),
+('sárga', 'yellow', 'hu'),
+('zöld', 'green', 'hu'),
+('fekete', 'black', 'hu'),
+('fehér', 'white', 'hu'),
+('szürke', 'gray', 'hu'),
+('barna', 'brown', 'hu'),
+('narancs', 'orange', 'hu'),
+('narancssárga', 'orange', 'hu'),
+('lila', 'purple', 'hu'),
+('ibolya', 'violet', 'hu'),
+('rózsaszín', 'pink', 'hu'),
+('arany', 'gold', 'hu'),
+('ezüst', 'silver', 'hu'),
+('homok', 'sand', 'hu'),
+('drapp', 'tan', 'hu'),
+('bézs', 'tan', 'hu'),
+('világos', 'light', 'hu'),
+('sötét', 'dark', 'hu'),
+('közép', 'medium', 'hu'),
+('kékes', 'bluish', 'hu'),
+('kékesszürke', 'bluish gray', 'hu'),
+('vörösesbarna', 'reddish brown', 'hu'),
+('átlátszó', 'trans', 'hu'),
+('áttetsző', 'trans', 'hu'),
+('gyöngyház', 'pearl', 'hu'),
+('fémes', 'metallic', 'hu'),
+('türkiz', 'turquoise', 'hu'),
+('azúr', 'azure', 'hu'),
+('olíva', 'olive', 'hu'),
+('lime', 'lime', 'hu');

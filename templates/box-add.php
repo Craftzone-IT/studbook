@@ -9,6 +9,7 @@ use Studbook\Http\Csrf;
  * @var array<string, mixed> $box
  * @var array{rb_num: string, bl_num: ?string, name: string, display: string} $part
  * @var list<array{id: int, name: string, rgb: string}> $colors
+ * @var list<array{id: int, name: string}> $hint boxes labelled for this part (when this one is not)
  */
 $id = (int) $box['id'];
 ?>
@@ -17,6 +18,14 @@ $id = (int) $box['id'];
 </p>
 <h1><?= e($part['display']) ?> <span class="subtitle"><?= e($part['name']) ?></span></h1>
 
+<?php if ($hint !== []) : ?>
+    <p class="flash flash-info">
+        <?= e(t('entry.hint')) ?>
+        <?php foreach ($hint as $i => $other) : ?>
+            <a href="<?= e(url('/b/' . $other['id'])) ?>"><?= e($other['name']) ?></a><?= $i < count($hint) - 1 ? ',' : '' ?>
+        <?php endforeach; ?>
+    </p>
+<?php endif; ?>
 <section class="card">
     <?php if ($colors === []) : ?>
         <p><?= e(t('box.no_colors')) ?></p>

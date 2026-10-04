@@ -45,6 +45,67 @@ final class BatchService
         return [$result, $batch->id];
     }
 
+    /**
+     * Adds more writes to an existing batch (an entry session), in one
+     * transaction, and replaces its description parameters.
+     *
+     * @param array<string, string|int> $params
+     * @param callable(Batch): void $work
+     * @return bool false when the batch does not exist or was reverted (start a new one)
+     */
+    public function append(int $batchId, array $params, callable $work): bool
+    {
+        $this->pdo->beginTransaction();
+        try {
+            $stmt = $this->pdo->prepare('SELECT reverted_at FROM batch WHERE id = ? FOR UPDATE');
+            $stmt->execute([$batchId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!is_array($row) || $row['reverted_at'] !== null) {
+                $this->pdo->rollBack();
+
+                return false;
+            }
+            $work(new Batch($this->pdo, $batchId));
+            $this->pdo->prepare('UPDATE batch SET description_params = ? WHERE id = ?')
+                ->execute([json_encode($params, JSON_UNESCAPED_UNICODE), $batchId]);
+            $this->pdo->commit();
+        } catch (\Throwable $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+
+        return true;
+    }
+
+    /**
+     * Most recent batches for the history page.
+     *
+     * @return list<array{id: int, created_at: string, description_key: string,
+     *     description_params: array<string, string|int>, reverted_at: ?string, changes: int}>
+     */
+    public function recent(int $limit = 50): array
+    {
+        $rows = $this->pdo->query(sprintf(
+            'SELECT b.id, b.created_at, b.description_key, b.description_params, b.reverted_at,
+                (SELECT COUNT(*) FROM batch_change c WHERE c.batch_id = b.id) AS changes
+             FROM batch b ORDER BY b.id DESC LIMIT %d',
+            max(1, min(500, $limit))
+        ))->fetchAll(PDO::FETCH_ASSOC);
+
+        return array_map(static function (array $row): array {
+            $params = json_decode((string) $row['description_params'], true);
+
+            return [
+                'id' => (int) $row['id'],
+                'created_at' => (string) $row['created_at'],
+                'description_key' => (string) $row['description_key'],
+                'description_params' => is_array($params) ? $params : [],
+                'reverted_at' => $row['reverted_at'] !== null ? (string) $row['reverted_at'] : null,
+                'changes' => (int) $row['changes'],
+            ];
+        }, $rows);
+    }
+
     /** @return array{id: int, description_key: string, description_params: array<string, string|int>, reverted_at: ?string}|null */
     public function find(int $id): ?array
     {

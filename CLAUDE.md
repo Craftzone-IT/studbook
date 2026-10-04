@@ -12,8 +12,8 @@ Background, decisions and their reasons: `docs/decisions.md`. Data model: `docs/
 
 - **Phase:** M0 installed and closed (#1). M1 runs on the host with the Rebrickable API (61,362/64,769 parts and 216/275 colours matched to BrickLink); #2 closes after the queued "Run import now" succeeds via cron. M2 merged (#13), to be tried on the host.
 - **Done:** M0 (#8, #10, #14 Hestia layout), browser setup wizard (#9), M1 importer (#12) with Rebrickable API ids (#15), M2 collections and boxes (#13).
-- **In progress:** per-page progress log for the API refresh (~17 s per page, ~20 min per refresh).
-- **Next:** try M2 on the host; then M3 – Fast entry (#4).
+- **In progress:** M3 – Fast entry (#4): entry grid with keyboard flow, step-by-step picker, free-text search (HU/EN synonyms, typo tolerance), "where does this go?" hint, entry sessions as one undo batch, history page.
+- **Next:** after M3 is merged, apply migration 0004 on the host (`/setup` or `bin/migrate`); part popularity (search ranking) is filled by the next import. Try M2 and M3 on the host; then M4 – Sets (#5).
 - **Open questions:**
   - PHP on the maintainer's host is 8.3 (`/usr/bin/php8.3`); `proc_open` is disabled there (Composer warns, works).
   - Rebrickable API format confirmed on the host (2026-10-04); `rebrickable.com` is not reachable from the cloud dev environment unless added to its network allowlist.

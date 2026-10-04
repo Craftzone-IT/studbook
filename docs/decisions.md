@@ -56,6 +56,15 @@ Record of product and technical decisions made during planning (October 2026). A
 - Backups: HestiaCP's built-in backup is sufficient (catalogue data can always be re-imported).
 - Development on GitHub; code written by Claude Code; issue → PR → review → merge. ~~Automatic deploy via GitHub Actions.~~ Superseded 2026-10-03: deployment is manual (see below).
 
+## M3 fast entry (2026-10-04)
+
+- **One entry session = one batch** per box, kept in the PHP session and continued for 30 minutes of inactivity. Undoing it removes everything entered in that session; a new addition after an undo starts a new batch. Single-step changes elsewhere stay one batch each. `/history` lists the latest 50 batches with Undo.
+- **Search runs in PHP + SQL, no search engine:** size patterns (`2x4`, either orientation, via the parsed `width`/`length`), part numbers (Rebrickable or BrickLink, exact or prefix, or a number in the name such as "45°"), colour phrases (longest match, BrickLink or Rebrickable name) and name words. Hungarian and variant words go through `search_synonym`; typing without accents works when the accentless form is unambiguous. Typos are corrected against the words of all part and colour names (optimal string alignment distance, 1 edit up to 5 letters, 2 above; ties go to the more frequent word); the vocabulary is cached per import run under `STORAGE_PATH/cache`. Results rank exact numbers first, then by `popularity`. A dedicated engine (MySQL FULLTEXT, Meilisearch) is not worth the hosting requirements at this catalogue size.
+- **Keyboard flow:** part field → Enter → colour filter (preselected when the query named a colour) → Enter → quantity → Enter adds; the part stays selected and focus returns to the colour filter. Enter waits for the results of the full query, so fast typing does not pick a stale result. Esc goes back a step, `/` jumps to the part field. The colour filter understands Hungarian colour words.
+- **Colours are listed by how often the part appears in that colour** in set inventories, so the likely colour is near the top.
+- **"Where does this go?"**: when the part has a label in another box of the same collection, entry shows those boxes; the plain add form shows the same hint.
+- **Step-by-step picker** (category → size → part, then the existing colour step) works without JavaScript; categories and parts with no set appearances are hidden from the category list.
+
 ## Rebrickable API for BrickLink ids (2026-10-04)
 
 - **Why:** the first real import on the maintainer's host matched only 147 of 275 colours and 11,844 of 64,769 parts by number. Of the 61,469 parts that occur in set inventories, 50,203 had no BrickLink number: about 43,500 printed parts (numbered differently on both sites) and 6,644 mould variants (`3040b`↔`3040`, `3001a`↔`3001old`). Guessing these would show wrong numbers, which breaks the rule that the UI always shows BrickLink numbers.
