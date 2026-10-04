@@ -262,13 +262,17 @@ final class OwnedQueries
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    /** @return list<array{id: int, name: string}> collections that are not archived */
+    /** @return list<array{id: int, name: string, can_lend: int}> collections that are not archived */
     public function activeCollections(): array
     {
-        $rows = $this->pdo->query('SELECT id, name FROM collection WHERE archived_at IS NULL ORDER BY name')
+        $rows = $this->pdo->query('SELECT id, name, can_lend FROM collection WHERE archived_at IS NULL ORDER BY name')
             ->fetchAll(PDO::FETCH_ASSOC);
 
-        return array_map(static fn (array $r): array => ['id' => (int) $r['id'], 'name' => (string) $r['name']], $rows);
+        return array_map(static fn (array $r): array => [
+            'id' => (int) $r['id'],
+            'name' => (string) $r['name'],
+            'can_lend' => (int) $r['can_lend'],
+        ], $rows);
     }
 
     /**

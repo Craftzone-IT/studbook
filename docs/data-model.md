@@ -13,8 +13,9 @@ Rebuilt by the importer (`docs/catalogue-import.md`); never edited by hand. Inte
 | `cat_color` | `rb_id` (PK), `name`, `rgb`, `is_trans`, `bl_id`, `bl_name` |
 | `cat_part_color` | part × colour pairs that exist (from elements and inventories) with an image URL where known; drives the colour picker and the image cache (M2) |
 | `cat_part_rel` | `rel_type` (P print, M mould, A alternate, B sub-part, R pair, T pattern), `child`, `parent` — equivalence in "what can I build" |
+| `cat_part_canon` | `part`, `variant`, `print`: representative of the part's equivalence group (union of M + A relationships; with P + T added for `print`), the most popular member. Only parts in a group have a row. Built by the importer, or on first use after migration 0006 |
 | `cat_theme` | themes (hierarchy via `parent_id`) |
-| `cat_set` | `set_num` (PK), `name`, `year`, `theme_id`, `num_parts`, `img_url` |
+| `cat_set` | `set_num` (PK), `name`, `year`, `theme_id`, `num_parts`, `img_url`, `need_qty` (parts needed: spares excluded, minifig parts included), `need_fig_qty` (of those, from minifigs) |
 | `cat_minifig` | `fig_num` (PK), `name`, `num_parts`, `img_url` |
 | `cat_inventory` | flattened default inventory of every set and minifig: `set_num`, `part`, `color_id`, `is_spare`, `from_minifig`, `quantity`. Minifig parts are flattened into the set with `from_minifig = 1` (so "ignore minifigures" is a filter); sub-sets of multi-packs are flattened one level deep. |
 | `cat_bl_part`, `cat_bl_color` | the user's BrickLink lists as loaded (number, name, category, alternates; colour id, name, RGB) |
@@ -38,8 +39,8 @@ BL↔RB matching: the importer fills `cat_part.bl_num` / `cat_color.bl_id` from 
 | `owned_set` | `id`, `collection_id`, `set_num`, `state` (`sealed`, `built`, `disassembled` = taken apart but kept together as a unit), `lock_mode` (`locked`, `lendable`; `lock` is a reserved word), `storage_id` nullable (box it is kept in, same collection), `created_at`. One row per physical copy. |
 | `owned_set_delta` | `owned_set_id`, `part`, `color_id`, `qty` (negative = missing, positive = extra); unique per set, part and colour — only differences from the official inventory |
 | `loose_lot` | `id`, `collection_id`, `storage_id`, `part`, `color_id`, `qty`, `source_set_id` nullable (unused so far, see `docs/decisions.md`, M4). Adding the same part + colour to a box merges into one lot. |
-| `build` | planned (M5): `id`, `collection_id`, `set_num`, `state` (`planned`, `in_progress`, `done`) |
-| `allocation` | planned (M5): `build_id`, `part`, `color`, `qty`, source: `loose_lot_id` or `owned_set_id` |
+| `build` | `id`, `collection_id` (the collection it is built for), `set_num`, `state` (`active`, `done`), `options` (JSON: collections used, equivalence mode, minifigs, colour substitution), `created_at` |
+| `allocation` | `build_id`, `part` (the actual part reserved, may be an equivalent), `color_id`, `qty`, source: `loose_lot_id` or `owned_set_id`. Only active builds have allocations |
 | `batch` | `id`, `created_at`, `description_key` + `description_params` (translated when shown), `reverted_at` |
 | `batch_change` | journal: `batch_id`, `table_name`, `row_id`, `action` (`insert`, `update`, `delete`), `before_data`, `after_data` (JSON rows) |
 | `import_run` | `id`, `trigger_type` (`cli`, `cron`, `manual`), `status` (`queued`, `running`, `success`, `failed`), `requested_at`, `started_at`, `finished_at`, `log`, `stats` (JSON report) |
@@ -52,8 +53,8 @@ BL↔RB matching: the importer fills `cat_part.bl_num` / `cat_color.bl_id` from 
 ## Derived values
 
 - **Contents of an owned set** = official inventory (minifig parts included, spares not) + deltas.
-- **Available from an owned set** = contents − allocations; only for `lendable` sets in collections that may lend.
-- **Free loose quantity** = `loose_lot.qty` − allocations.
+- **Available from an owned set** = contents − allocations; only for `lendable` sets of the build's collection, or of other selected collections that may lend (`can_lend`).
+- **Free loose quantity** = `loose_lot.qty` − allocations (never below 0).
 - **What can I build** for a target set, layered:
   1. free loose parts (selected collections),
   2. parts from lendable owned sets in selected collections,
@@ -63,6 +64,6 @@ BL↔RB matching: the importer fills `cat_part.bl_num` / `cat_color.bl_id` from 
 ## Lifecycle operations
 
 - **Break up a set:** its contents (optionally plus spares) become loose lots, each part into the first box labelled for it or a chosen box, merged with existing lots; the set and its deltas are removed. One batch.
-- **Finish a build:** allocations are consumed; optionally create an `owned_set` in state `built`.
+- **Finish a build:** reserved loose parts are taken out of their lots, parts reserved from sets are recorded there as missing (deltas), allocations are deleted, the build becomes `done`; optionally an `owned_set` (built, locked) is created. One batch. **Cancelling** deletes the build and its allocations (one batch).
 - **Move between collections:** a set (leaves its box), a lot (into any box of any collection), or a whole box with its labels, lots and the sets kept in it (not the Inbox); one batch.
 - **Delete a collection:** only when empty, or with confirmation as a revertible batch.

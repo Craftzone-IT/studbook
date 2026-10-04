@@ -47,6 +47,18 @@ final class Request
         return is_string($value) ? $value : $default;
     }
 
+    /** @return array<string, mixed> all query parameters (values may be arrays, e.g. `others[]`) */
+    public function queryAll(): array
+    {
+        return $this->query;
+    }
+
+    /** @return array<string, mixed> all POST fields (values may be arrays) */
+    public function inputAll(): array
+    {
+        return $this->post;
+    }
+
     public function input(string $key, string $default = ''): string
     {
         $value = $this->post[$key] ?? $default;

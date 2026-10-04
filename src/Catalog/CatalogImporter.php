@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Studbook\Catalog;
 
 use PDO;
+use Studbook\Build\PartEquivalence;
 
 /**
  * Loads the Rebrickable CSV files and the BrickLink lists into `*_new`
@@ -24,6 +25,7 @@ final class CatalogImporter
         'cat_set',
         'cat_minifig',
         'cat_inventory',
+        'cat_part_canon',
         'cat_bl_color',
         'cat_bl_part',
     ];
@@ -499,6 +501,15 @@ final class CatalogImporter
                    WHERE set_num NOT LIKE 'fig-%' GROUP BY part) x ON x.part = p.rb_num
              SET p.popularity = x.n"
         );
+        // Parts a set needs, for "what can I build" percentages.
+        $this->pdo->exec(
+            'UPDATE cat_set_new s
+             JOIN (SELECT set_num, SUM(quantity) AS n, SUM(CASE WHEN from_minifig = 1 THEN quantity ELSE 0 END) AS f
+                   FROM cat_inventory_new WHERE is_spare = 0 GROUP BY set_num) x ON x.set_num = s.set_num
+             SET s.need_qty = x.n, s.need_fig_qty = x.f'
+        );
+        $groups = (new PartEquivalence($this->pdo))->build('cat_part_canon_new', 'cat_part_rel_new', 'cat_part_new');
+        ($this->log)(sprintf('Parts in equivalence groups: %d', $groups));
     }
 
     private static function isPrintOrSticker(string $num, string $name): bool
