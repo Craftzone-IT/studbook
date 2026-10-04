@@ -1096,3 +1096,127 @@ label.radio {
 .nowrap {
     white-space: nowrap;
 }
+
+/* What can I build */
+.coverage-bar {
+    display: block;
+    width: 100%;
+    max-width: 360px;
+    height: 8px;
+    margin-top: 4px;
+}
+
+.cov-bg {
+    fill: var(--border);
+}
+
+.cov-loose {
+    fill: var(--ok-text);
+}
+
+.cov-sets {
+    fill: var(--focus);
+}
+
+.legend {
+    margin-left: 8px;
+    white-space: nowrap;
+}
+
+.legend-loose,
+.legend-sets {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin: 0 4px 0 8px;
+    border-radius: 2px;
+    vertical-align: -1px;
+    background: var(--ok-text);
+}
+
+.legend-sets {
+    background: var(--focus);
+}
+
+.build-form {
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.build-options,
+.build-filters {
+    display: grid;
+    gap: 8px 16px;
+}
+
+.build-checks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 16px;
+}
+
+.build-submit,
+.build-actions,
+.pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    margin-top: 12px;
+}
+
+.build-submit select {
+    width: auto;
+}
+
+.range-inputs {
+    display: flex;
+    gap: 8px;
+}
+
+.range-inputs input {
+    width: 50%;
+}
+
+.pager {
+    justify-content: center;
+    margin: 16px 0;
+}
+
+.coverage-summary {
+    margin: 8px 0 0;
+}
+
+.coverage-summary strong {
+    font-size: 1.4rem;
+    margin-right: 6px;
+}
+
+.row-missing td:last-child {
+    color: var(--err-text);
+    font-weight: 700;
+}
+
+@media (min-width: 800px) {
+    .build-options,
+    .build-filters {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.form.build-form {
+    max-width: none;
+}
+
+.lot-list-compact .lot {
+    padding: 4px 0;
+}
+
+.lot-list-compact .part-img {
+    width: 36px;
+    height: 36px;
+}
+
+.lot-list-compact .lot-qty {
+    font-size: 1rem;
+}

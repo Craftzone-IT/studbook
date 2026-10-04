@@ -11,7 +11,10 @@ use Studbook\Auth\PdoAttemptStore;
 use Studbook\Auth\UserRepository;
 use Studbook\Controller\AuthController;
 use Studbook\Controller\BatchController;
+use Studbook\Build\BuildService;
+use Studbook\Build\CoverageService;
 use Studbook\Controller\BoxController;
+use Studbook\Controller\BuildController;
 use Studbook\Controller\CollectionController;
 use Studbook\Controller\EntryController;
 use Studbook\Controller\HistoryController;
@@ -181,6 +184,21 @@ final class App
         $entry = new EntryController($this->view, $owned, $queries, $catalog, $search);
         $searchPage = new SearchController($this->view, $search, $queries);
         $picker = new PickerController($this->view, fn (): PDO => $this->pdo(), $queries);
+        $buildPages = new BuildController(
+            $this->view,
+            fn (): PDO => $this->pdo(),
+            $queries,
+            fn (): CoverageService => new CoverageService(
+                $this->pdo(),
+                $this->config->path('STORAGE_PATH', 'storage') . '/cache'
+            ),
+            fn (): BuildService => new BuildService(
+                $this->pdo(),
+                new BatchService($this->pdo()),
+                new OwnedQueries($this->pdo())
+            ),
+            $catalog
+        );
         $history = new HistoryController($this->view, fn (): BatchService => new BatchService($this->pdo()));
         $import = new ImportController($this->view, fn (): PDO => $this->pdo());
         $settings = new SettingsController($this->view, fn (): SettingRepository => $this->settings());
@@ -230,6 +248,15 @@ final class App
         $this->router->get('/b/{id}/pick', $picker->page(...));
         $this->router->get('/search', $searchPage->page(...));
         $this->router->get('/history', $history->page(...));
+        $this->router->get('/build', $buildPages->scan(...));
+        $this->router->get('/build/set/{set}', $buildPages->target(...));
+        $this->router->get('/build/set/{set}/wanted.xml', $buildPages->targetWanted(...));
+        $this->router->post('/builds', $buildPages->start(...));
+        $this->router->get('/builds/{id}', $buildPages->show(...));
+        $this->router->post('/builds/{id}/reserve', $buildPages->reserve(...));
+        $this->router->post('/builds/{id}/release', $buildPages->release(...));
+        $this->router->post('/builds/{id}/finish', $buildPages->finish(...));
+        $this->router->get('/builds/{id}/wanted.xml', $buildPages->buildWanted(...));
         $this->router->get('/img', $images->show(...));
         $this->router->post('/batches/{id}/undo', $batches->undo(...));
         $this->router->get('/settings', $settings->show(...));

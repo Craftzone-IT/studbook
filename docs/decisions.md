@@ -56,6 +56,17 @@ Record of product and technical decisions made during planning (October 2026). A
 - Backups: HestiaCP's built-in backup is sufficient (catalogue data can always be re-imported).
 - Development on GitHub; code written by Claude Code; issue → PR → review → merge. ~~Automatic deploy via GitHub Actions.~~ Superseded 2026-10-03: deployment is manual (see below).
 
+## M5 what can I build (2026-10-04)
+
+- **Which parts count:** the loose parts and unlocked (`lendable`) sets of the collection the build is for, plus those of other collections that allow lending (`collection.can_lend`) and are selected. Locked sets never count. Parts reserved by another build do not count.
+- **Coverage** of a set = Σ over (part group, colour) of min(needed, available), first from loose parts, then from sets. Spares are never needed; minifigure parts optionally ignored. Each set is evaluated on its own; sets do not compete for parts in the scan (only builds reserve).
+- **Interchangeable parts** come from Rebrickable's part relationships, grouped by union-find into `cat_part_canon`: "variants" (mould variants and alternates, the default) and "prints" (also printed/patterned versions count as the plain part). Exact matching is the third option. Pairs and sub-parts are never interchangeable.
+- **Colour substitution** is informational: an extra percentage "with any colour"; builds only reserve the exact colour.
+- **Performance without a search engine:** the available parts go into temporary tables; only inventory rows of those parts are read, through a covering `(part, color_id, is_spare, from_minifig, set_num, quantity)` index (replaces the old `(part, color_id)` index), and aggregated in PHP. Above 750k matching rows the whole inventory is streamed in primary-key order instead, so memory stays flat. On the dev catalogue (28k sets, 1.7M inventory rows) a scan takes 0.2–1 s; results are cached per options, owned-data version (latest batch, undo count) and catalogue version under `STORAGE_PATH/cache`.
+- **Builds** reserve parts (`allocation`) per actual lot or set, loose parts first (boxes by name), then sets. "Reserve newly available parts" tops up later. The pick list is grouped by box and by set. Finishing takes the parts out (sets get "missing" deltas) and can add the model as a built set. Taking parts out of a reserved lot is not blocked; the pick list warns, and finishing takes what is left.
+- **Wanted list:** BrickLink XML (`ITEMTYPE` P, BrickLink part and colour ids, `MINQTY`) for the missing parts of a set or a build; parts or colours without a BrickLink id are listed in an XML comment.
+- **Results** default to sets with at least 25 parts and hide sets already owned; filters for theme (with sub-themes), years, part count and minimum coverage.
+
 ## M4 sets (2026-10-04)
 
 - **One row per physical copy.** Adding "2 × 6000" creates two `owned_set` rows in one batch, so each copy can have its own state, box and missing parts.

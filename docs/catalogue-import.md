@@ -71,7 +71,8 @@ Only one import runs at a time (a database lock); a second one exits immediately
    - parts by identical number, then via BrickLink's alternate item numbers. Ambiguous cases are not guessed.
 4. **Sizes:** width, length and height (in plates) are parsed from part names of common families (Brick, Plate, Tile, Slope, Wedge, Panel). Unclear names get no size.
 5. **Inventories:** for every set and minifig, the default inventory (lowest version) is flattened into `cat_inventory`, including parts of the minifigs in the set (`from_minifig = 1`) and of sub-sets in multi-packs.
-6. **Swap:** all `*_new` tables replace the live ones in one atomic `RENAME TABLE`. If anything fails before this step, the previous catalogue stays untouched.
+6. **Derived values:** part popularity (number of sets a part is in), the number of parts each set needs (`cat_set.need_qty`, `need_fig_qty`), and the groups of interchangeable parts (`cat_part_canon`, from mould, alternate, print and pattern relationships) used by "What can I build?".
+7. **Swap:** all `*_new` tables replace the live ones in one atomic `RENAME TABLE`. If anything fails before this step, the previous catalogue stays untouched.
 
 A full import takes about 1.5 minutes on a small server (about 65,000 parts, 28,000 sets, 1.7 million inventory rows) and needs roughly 300 MB of free database space while both copies exist.
 
