@@ -8,7 +8,10 @@ use Studbook\Catalog\ImageCache;
 use Studbook\Http\Request;
 use Studbook\Http\Response;
 
-/** Serves cached part images (`/img?part=3001&color=4`); a neutral placeholder when none is available. */
+/**
+ * Serves cached part and set images (`/img?part=3001&color=4`, `/img?set=10696-1`);
+ * a neutral placeholder when none is available.
+ */
 final class ImageController
 {
     /** @var \Closure(): ImageCache */
@@ -24,6 +27,10 @@ final class ImageController
     {
         $part = $request->query('part');
         $color = $request->query('color', (string) ImageCache::ANY_COLOR);
+        if ($request->query('set') !== '') {
+            $part = $request->query('set');
+            $color = (string) ImageCache::SET_IMAGE;
+        }
         if ($part === '' || strlen($part) > 64 || !preg_match('/^-?\d+$/', $color)) {
             return self::placeholder();
         }

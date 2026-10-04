@@ -19,6 +19,7 @@ use Studbook\Controller\PickerController;
 use Studbook\Controller\SearchController;
 use Studbook\Controller\ImageController;
 use Studbook\Controller\ImportController;
+use Studbook\Controller\SetController;
 use Studbook\Controller\SettingsController;
 use Studbook\Controller\SetupController;
 use Studbook\Database\Connection;
@@ -37,6 +38,7 @@ use Studbook\Catalog\PartSearch;
 use Studbook\Owned\BatchService;
 use Studbook\Owned\OwnedQueries;
 use Studbook\Owned\OwnedService;
+use Studbook\Owned\SetService;
 use Studbook\Setup\SetupService;
 
 final class App
@@ -161,6 +163,11 @@ final class App
         $catalog = fn (): CatalogRepository => new CatalogRepository($this->pdo());
         $collections = new CollectionController($this->view, $this->config, $owned, $queries, $catalog);
         $boxes = new BoxController($this->view, $this->config, $owned, $queries, $catalog);
+        $sets = new SetController($this->view, fn (): SetService => new SetService(
+            new BatchService($this->pdo()),
+            new OwnedQueries($this->pdo()),
+            new CatalogRepository($this->pdo())
+        ), $queries, $catalog);
         $images = new ImageController(fn (): ImageCache => new ImageCache(
             $this->pdo(),
             $this->config->path('IMAGE_CACHE_PATH', 'storage/images'),
@@ -195,9 +202,21 @@ final class App
         $this->router->post('/c/{id}/delete', $collections->delete(...));
         $this->router->post('/c/{id}/boxes', $collections->createBox(...));
         $this->router->get('/c/{id}/labels', $collections->labels(...));
+        $this->router->get('/c/{id}/sets/new', $sets->addForm(...));
+        $this->router->post('/c/{id}/sets', $sets->create(...));
+        $this->router->get('/s/{id}', $sets->show(...));
+        $this->router->post('/s/{id}/update', $sets->update(...));
+        $this->router->post('/s/{id}/move', $sets->move(...));
+        $this->router->post('/s/{id}/delete', $sets->delete(...));
+        $this->router->get('/s/{id}/delta', $sets->deltaForm(...));
+        $this->router->post('/s/{id}/delta', $sets->saveDelta(...));
+        $this->router->post('/deltas/{id}/delete', $sets->removeDelta(...));
+        $this->router->get('/s/{id}/break-up', $sets->breakUpForm(...));
+        $this->router->post('/s/{id}/break-up', $sets->breakUp(...));
         $this->router->get('/b/{id}', $boxes->show(...));
         $this->router->post('/b/{id}/update', $boxes->update(...));
         $this->router->post('/b/{id}/delete', $boxes->delete(...));
+        $this->router->post('/b/{id}/move', $boxes->moveToCollection(...));
         $this->router->post('/b/{id}/labels', $boxes->labels(...));
         $this->router->get('/b/{id}/add', $boxes->addForm(...));
         $this->router->post('/b/{id}/lots', $boxes->addLot(...));

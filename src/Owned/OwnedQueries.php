@@ -205,4 +205,92 @@ final class OwnedQueries
 
         return (int) $stmt->fetchColumn() === 0;
     }
+
+    /**
+     * Owned sets of a collection, or of a box when `$storageId` is given.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function sets(int $collectionId, ?int $storageId = null): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT o.*, s.name, s.year, s.num_parts, b.name AS box_name,
+                (SELECT COUNT(*) FROM owned_set_delta d WHERE d.owned_set_id = o.id) AS deltas
+             FROM owned_set o
+             LEFT JOIN cat_set s ON s.set_num = o.set_num
+             LEFT JOIN storage b ON b.id = o.storage_id
+             WHERE ' . ($storageId === null ? 'o.collection_id = ?' : 'o.storage_id = ?') . '
+             ORDER BY o.set_num, o.id'
+        );
+        $stmt->execute([$storageId ?? $collectionId]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /** @return array<string, mixed>|null an owned set with its catalogue data, collection and box */
+    public function ownedSet(int $id): ?array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT o.*, s.name, s.year, s.num_parts, t.name AS theme,
+                c.name AS collection_name, b.name AS box_name
+             FROM owned_set o
+             JOIN collection c ON c.id = o.collection_id
+             LEFT JOIN cat_set s ON s.set_num = o.set_num
+             LEFT JOIN cat_theme t ON t.id = s.theme_id
+             LEFT JOIN storage b ON b.id = o.storage_id
+             WHERE o.id = ?'
+        );
+        $stmt->execute([$id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return is_array($row) ? $row : null;
+    }
+
+    /** @return list<array<string, mixed>> recorded differences of an owned set */
+    public function deltas(int $ownedSetId): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT d.*, p.name AS part_name, p.bl_num, COALESCE(c.bl_name, c.name) AS color_name, c.rgb
+             FROM owned_set_delta d
+             LEFT JOIN cat_part p ON p.rb_num = d.part
+             LEFT JOIN cat_color c ON c.rb_id = d.color_id
+             WHERE d.owned_set_id = ?
+             ORDER BY d.qty < 0 DESC, COALESCE(p.bl_num, d.part), color_name'
+        );
+        $stmt->execute([$ownedSetId]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /** @return list<array{id: int, name: string}> collections that are not archived */
+    public function activeCollections(): array
+    {
+        $rows = $this->pdo->query('SELECT id, name FROM collection WHERE archived_at IS NULL ORDER BY name')
+            ->fetchAll(PDO::FETCH_ASSOC);
+
+        return array_map(static fn (array $r): array => ['id' => (int) $r['id'], 'name' => (string) $r['name']], $rows);
+    }
+
+    /**
+     * Boxes of all collections that are not archived, for "move to" lists.
+     *
+     * @return list<array{id: int, name: string, type: string, collection_id: int, collection_name: string}>
+     */
+    public function allBoxes(): array
+    {
+        $rows = $this->pdo->query(
+            "SELECT b.id, b.name, b.type, b.collection_id, c.name AS collection_name
+             FROM storage b JOIN collection c ON c.id = b.collection_id
+             WHERE c.archived_at IS NULL
+             ORDER BY c.name, c.id, b.type = 'inbox' DESC, b.name"
+        )->fetchAll(PDO::FETCH_ASSOC);
+
+        return array_map(static fn (array $r): array => [
+            'id' => (int) $r['id'],
+            'name' => (string) $r['name'],
+            'type' => (string) $r['type'],
+            'collection_id' => (int) $r['collection_id'],
+            'collection_name' => (string) $r['collection_name'],
+        ], $rows);
+    }
 }

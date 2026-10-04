@@ -19,7 +19,8 @@ final class Batch
         'storage' => ['collection_id', 'name', 'type', 'created_at', 'updated_at'],
         'storage_label' => ['storage_id', 'part', 'position'],
         'loose_lot' => ['collection_id', 'storage_id', 'part', 'color_id', 'qty', 'source_set_id', 'updated_at'],
-        'owned_set' => ['collection_id', 'set_num', 'state', 'lock_mode', 'storage_id', 'updated_at'],
+        'owned_set' => ['collection_id', 'set_num', 'state', 'lock_mode', 'storage_id', 'created_at', 'updated_at'],
+        'owned_set_delta' => ['owned_set_id', 'part', 'color_id', 'qty', 'updated_at'],
     ];
 
     public function __construct(private readonly PDO $pdo, public readonly int $id)

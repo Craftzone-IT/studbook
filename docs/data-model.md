@@ -35,9 +35,9 @@ BL↔RB matching: the importer fills `cat_part.bl_num` / `cat_color.bl_id` from 
 | `collection` | `id`, `name`, `can_lend` (may "what can I build" borrow from it), `archived_at`, `created_at`, `updated_at` |
 | `storage` | `id`, `collection_id`, `name`, `type` (`large`, `small`, `jar`, `set_box`, `inbox`); one `inbox` per collection, created with it, never deleted |
 | `storage_label` | `id`, `storage_id`, `part` (Rebrickable number), `position` — part numbers written on the box; source of the quick-pick tiles and the printed label |
-| `owned_set` | `id`, `collection_id`, `set_num`, `state` (`sealed`, `built`, `disassembled`), `lock_mode` (`locked`, `lendable`; `lock` is a reserved word), `storage_id` nullable — table exists since M2 for the home page counts; managed in M4 |
-| `owned_set_delta` | planned (M4): `owned_set_id`, `part`, `color`, `qty` (±) — only differences from the official inventory |
-| `loose_lot` | `id`, `collection_id`, `storage_id`, `part`, `color_id`, `qty`, `source_set_id` nullable. Adding the same part + colour to a box merges into one lot. |
+| `owned_set` | `id`, `collection_id`, `set_num`, `state` (`sealed`, `built`, `disassembled` = taken apart but kept together as a unit), `lock_mode` (`locked`, `lendable`; `lock` is a reserved word), `storage_id` nullable (box it is kept in, same collection), `created_at`. One row per physical copy. |
+| `owned_set_delta` | `owned_set_id`, `part`, `color_id`, `qty` (negative = missing, positive = extra); unique per set, part and colour — only differences from the official inventory |
+| `loose_lot` | `id`, `collection_id`, `storage_id`, `part`, `color_id`, `qty`, `source_set_id` nullable (unused so far, see `docs/decisions.md`, M4). Adding the same part + colour to a box merges into one lot. |
 | `build` | planned (M5): `id`, `collection_id`, `set_num`, `state` (`planned`, `in_progress`, `done`) |
 | `allocation` | planned (M5): `build_id`, `part`, `color`, `qty`, source: `loose_lot_id` or `owned_set_id` |
 | `batch` | `id`, `created_at`, `description_key` + `description_params` (translated when shown), `reverted_at` |
@@ -51,7 +51,8 @@ BL↔RB matching: the importer fills `cat_part.bl_num` / `cat_color.bl_id` from 
 
 ## Derived values
 
-- **Available from an owned set** = official inventory − spares + deltas − allocations.
+- **Contents of an owned set** = official inventory (minifig parts included, spares not) + deltas.
+- **Available from an owned set** = contents − allocations; only for `lendable` sets in collections that may lend.
 - **Free loose quantity** = `loose_lot.qty` − allocations.
 - **What can I build** for a target set, layered:
   1. free loose parts (selected collections),
@@ -61,7 +62,7 @@ BL↔RB matching: the importer fills `cat_part.bl_num` / `cat_color.bl_id` from 
 
 ## Lifecycle operations
 
-- **Disassemble a set:** convert the owned set's effective inventory into `loose_lot` rows (with `source_set_id`) in one batch.
+- **Break up a set:** its contents (optionally plus spares) become loose lots, each part into the first box labelled for it or a chosen box, merged with existing lots; the set and its deltas are removed. One batch.
 - **Finish a build:** allocations are consumed; optionally create an `owned_set` in state `built`.
-- **Move between collections:** a set, a lot or a whole box; one batch.
+- **Move between collections:** a set (leaves its box), a lot (into any box of any collection), or a whole box with its labels, lots and the sets kept in it (not the Inbox); one batch.
 - **Delete a collection:** only when empty, or with confirmation as a revertible batch.

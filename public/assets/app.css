@@ -977,3 +977,122 @@ label.checkbox {
         padding: 24px;
     }
 }
+
+/* Sets */
+.set-img {
+    width: 64px;
+    height: 48px;
+    object-fit: contain;
+    background: #fff;
+    border-radius: 6px;
+}
+
+.lot:has(> .set-img) {
+    grid-template-columns: 64px 1fr auto;
+}
+
+.set-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.set-preview h1,
+.set-preview h2 {
+    margin: 0 0 4px;
+}
+
+.set-img-large {
+    width: 160px;
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    object-fit: contain;
+    background: #fff;
+    border-radius: var(--radius);
+}
+
+.choice-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    border: 0;
+    margin: 0 0 8px;
+    padding: 0;
+}
+
+.choice-row legend {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.choice-row .hint {
+    flex-basis: 100%;
+    margin: 0;
+}
+
+.form label.radio,
+label.radio {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    font-weight: 400;
+    min-height: 44px;
+}
+
+.qty-missing {
+    color: var(--err-text);
+    font-size: 1rem;
+}
+
+.qty-extra {
+    color: var(--ok-text);
+    font-size: 1rem;
+}
+
+.delta-forms {
+    display: grid;
+    gap: 4px 16px;
+    margin-top: 8px;
+}
+
+.delta-forms .form-inline label {
+    flex-basis: 100%;
+    font-weight: 600;
+}
+
+.delta-forms .form-inline input[type="text"] {
+    flex: 1 1 140px;
+}
+
+.part-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.part-cell .part-img {
+    width: 40px;
+    height: 40px;
+}
+
+.summary-heading {
+    display: inline;
+    margin: 0;
+}
+
+@media (min-width: 800px) {
+    .delta-forms {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .set-img-large {
+        width: 240px;
+    }
+}
+
+.nowrap {
+    white-space: nowrap;
+}

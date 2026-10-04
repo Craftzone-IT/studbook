@@ -84,6 +84,7 @@ final class CollectionController
             'title' => $collection['name'],
             'collection' => $collection,
             'boxes' => ($this->queries)()->boxes((int) $collection['id']),
+            'sets' => ($this->queries)()->sets((int) $collection['id']),
             'empty' => ($this->queries)()->isCollectionEmpty((int) $collection['id']),
             'boxTypes' => OwnedService::USER_BOX_TYPES,
         ]));

@@ -7,7 +7,7 @@ namespace Studbook\Catalog;
 use PDO;
 
 /**
- * Part images, fetched from Rebrickable on first display and served from
+ * Part and set images, fetched from Rebrickable on first display and served from
  * IMAGE_CACHE_PATH afterwards. A missing image (no URL, HTTP 404) is
  * retried after a week, a temporary failure (timeout, server error) after an
  * hour, so neither causes a request on every page view.
@@ -16,6 +16,8 @@ final class ImageCache
 {
     /** Colour id meaning "any colour" (box labels show the part, not a colour). */
     public const ANY_COLOR = -1;
+    /** Colour id under which a set picture is cached (the "part" is the set number). */
+    public const SET_IMAGE = -2;
     public const RETRY_MISSING_HOURS = 24 * 7;
     public const RETRY_ERROR_HOURS = 1;
     public const MAX_BYTES = 2_000_000;
@@ -104,7 +106,10 @@ final class ImageCache
     /** Image URL from the catalogue; for "any colour" the first colour with an image. */
     private function sourceUrl(string $part, int $colorId): ?string
     {
-        if ($colorId === self::ANY_COLOR) {
+        if ($colorId === self::SET_IMAGE) {
+            $stmt = $this->pdo->prepare('SELECT img_url FROM cat_set WHERE set_num = ?');
+            $stmt->execute([$part]);
+        } elseif ($colorId === self::ANY_COLOR) {
             $stmt = $this->pdo->prepare(
                 'SELECT img_url FROM cat_part_color WHERE part = ? AND img_url IS NOT NULL ORDER BY color_id LIMIT 1'
             );

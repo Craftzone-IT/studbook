@@ -126,6 +126,85 @@ final class CatalogRepository
         return $result;
     }
 
+    /**
+     * A catalogue set by number; "10696" also finds "10696-1".
+     *
+     * @return array{set_num: string, name: string, year: ?int, num_parts: int, theme: ?string}|null
+     */
+    public function set(string $setNum): ?array
+    {
+        $setNum = trim($setNum);
+        if ($setNum === '' || strlen($setNum) > 64) {
+            return null;
+        }
+        $stmt = $this->pdo->prepare(
+            'SELECT s.set_num, s.name, s.year, s.num_parts, t.name AS theme
+             FROM cat_set s LEFT JOIN cat_theme t ON t.id = s.theme_id
+             WHERE s.set_num IN (?, ?) ORDER BY s.set_num = ? DESC LIMIT 1'
+        );
+        $stmt->execute([$setNum, $setNum . '-1', $setNum]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return is_array($row) ? self::setRow($row) : null;
+    }
+
+    /**
+     * Sets matching a number (exact, "-1" variant, prefix) or the words of a name.
+     *
+     * @return list<array{set_num: string, name: string, year: ?int, num_parts: int, theme: ?string}>
+     */
+    public function findSets(string $query, int $limit = 30): array
+    {
+        $query = trim($query);
+        if ($query === '' || mb_strlen($query) > 100) {
+            return [];
+        }
+        $like = static fn (string $v): string => addcslashes($v, '%_\\');
+        $where = ['s.set_num = ?', 's.set_num LIKE ?'];
+        $params = [$query, $like($query) . '%'];
+        $words = preg_split('/\s+/u', $query, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $nameMatch = implode(' AND ', array_fill(0, count($words), 's.name LIKE ?'));
+        $where[] = '(' . $nameMatch . ')';
+        foreach ($words as $word) {
+            $params[] = '%' . $like($word) . '%';
+        }
+        $stmt = $this->pdo->prepare(sprintf(
+            'SELECT s.set_num, s.name, s.year, s.num_parts, t.name AS theme
+             FROM cat_set s LEFT JOIN cat_theme t ON t.id = s.theme_id
+             WHERE %s
+             ORDER BY s.set_num = ? DESC, s.set_num = ? DESC, s.set_num LIKE ? DESC, s.year DESC, s.set_num
+             LIMIT %d',
+            implode(' OR ', $where),
+            max(1, min(100, $limit))
+        ));
+        $stmt->execute([...$params, $query, $query . '-1', $like($query) . '%']);
+
+        return array_map(self::setRow(...), $stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+
+    /**
+     * Official inventory of a set, one row per part and colour (minifig parts included).
+     *
+     * @return list<array{part: string, color_id: int, qty: int, spare: int}>
+     */
+    public function setInventory(string $setNum): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT part, color_id,
+                    SUM(CASE WHEN is_spare = 0 THEN quantity ELSE 0 END) AS qty,
+                    SUM(CASE WHEN is_spare = 1 THEN quantity ELSE 0 END) AS spare
+             FROM cat_inventory WHERE set_num = ? GROUP BY part, color_id'
+        );
+        $stmt->execute([$setNum]);
+
+        return array_map(static fn (array $r): array => [
+            'part' => (string) $r['part'],
+            'color_id' => (int) $r['color_id'],
+            'qty' => (int) $r['qty'],
+            'spare' => (int) $r['spare'],
+        ], $stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+
     public function isEmpty(): bool
     {
         return $this->pdo->query('SELECT 1 FROM cat_part LIMIT 1')->fetchColumn() === false;
@@ -157,6 +236,21 @@ final class CatalogRepository
             'id' => (int) $row['rb_id'],
             'name' => (string) ($row['bl_name'] ?? $row['name']),
             'rgb' => (string) $row['rgb'],
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @return array{set_num: string, name: string, year: ?int, num_parts: int, theme: ?string}
+     */
+    private static function setRow(array $row): array
+    {
+        return [
+            'set_num' => (string) $row['set_num'],
+            'name' => (string) $row['name'],
+            'year' => $row['year'] !== null ? (int) $row['year'] : null,
+            'num_parts' => (int) $row['num_parts'],
+            'theme' => $row['theme'] !== null ? (string) $row['theme'] : null,
         ];
     }
 }
