@@ -13,7 +13,10 @@ use Studbook\Controller\AuthController;
 use Studbook\Controller\BatchController;
 use Studbook\Build\BuildService;
 use Studbook\Build\CoverageService;
+use Studbook\Camera\Brickognize;
+use Studbook\Camera\TesseractOcr;
 use Studbook\Controller\BoxController;
+use Studbook\Controller\CameraController;
 use Studbook\Controller\BuildController;
 use Studbook\Controller\CollectionController;
 use Studbook\Controller\EntryController;
@@ -52,7 +55,7 @@ final class App
         'X-Content-Type-Options' => 'nosniff',
         'X-Frame-Options' => 'DENY',
         'Referrer-Policy' => 'same-origin',
-        'Content-Security-Policy' => "default-src 'self'; img-src 'self' data:; object-src 'none'; "
+        'Content-Security-Policy' => "default-src 'self'; img-src 'self' data: blob:; object-src 'none'; "
             . "base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
     ];
 
@@ -69,6 +72,10 @@ final class App
         $this->view = new View($config->rootPath() . '/templates');
         $this->router = new Router();
         Url::setBasePath($config->basePath());
+        $this->view->share('cameraFeatures', [
+            'ocr' => $config->bool('OCR_ENABLED'),
+            'recognition' => $config->bool('BRICKOGNIZE_ENABLED'),
+        ]);
         $this->view->share('sourceUrl', $config->get('APP_SOURCE_URL', 'https://github.com/Craftzone-IT/studbook'));
         $this->registerRoutes();
     }
@@ -201,7 +208,28 @@ final class App
         );
         $history = new HistoryController($this->view, fn (): BatchService => new BatchService($this->pdo()));
         $import = new ImportController($this->view, fn (): PDO => $this->pdo());
-        $settings = new SettingsController($this->view, fn (): SettingRepository => $this->settings());
+        $camera = new CameraController(
+            $this->view,
+            $this->config,
+            new TesseractOcr(
+                $this->config->get('TESSERACT_BINARY', 'tesseract'),
+                $this->config->get('OCR_LANGUAGE', 'eng')
+            ),
+            $owned,
+            $queries,
+            $catalog,
+            fn (): Brickognize => new Brickognize(
+                $this->config->get('BRICKOGNIZE_API_URL', 'https://api.brickognize.com'),
+                $this->config->int('BRICKOGNIZE_TIMEOUT_SECONDS', 10),
+                $this->config->path('STORAGE_PATH', 'storage') . '/cache',
+                'Studbook (+' . $this->config->get('APP_SOURCE_URL', 'https://github.com/Craftzone-IT/studbook') . ')'
+            )
+        );
+        $settings = new SettingsController(
+            $this->view,
+            fn (): SettingRepository => $this->settings(),
+            $camera->status(...)
+        );
 
         $this->router->get('/login', $auth->showLogin(...), public: true);
         $this->router->post('/login', $auth->login(...), public: true);
@@ -248,6 +276,12 @@ final class App
         $this->router->get('/b/{id}/pick', $picker->page(...));
         $this->router->get('/search', $searchPage->page(...));
         $this->router->get('/history', $history->page(...));
+        $this->router->get('/scan', $camera->scan(...));
+        $this->router->get('/b/{id}/labels/photo', $camera->labelsForm(...));
+        $this->router->post('/b/{id}/labels/photo', $camera->labelsRead(...));
+        $this->router->post('/b/{id}/labels/photo/save', $camera->labelsSave(...));
+        $this->router->get('/identify', $camera->identifyForm(...));
+        $this->router->post('/identify', $camera->identify(...));
         $this->router->get('/build', $buildPages->scan(...));
         $this->router->get('/build/set/{set}', $buildPages->target(...));
         $this->router->get('/build/set/{set}/wanted.xml', $buildPages->targetWanted(...));

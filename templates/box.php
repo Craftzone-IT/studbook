@@ -34,6 +34,9 @@ $img = static fn (string $part, int $color): string => url('/img') . '?part=' . 
         <span>
             <a class="button button-primary" href="<?= e(url('/b/' . $id . '/entry')) ?>"><?= e(t('entry.open')) ?></a>
             <a class="button" href="<?= e(url('/b/' . $id . '/pick')) ?>"><?= e(t('picker.open')) ?></a>
+            <?php if (!empty($cameraFeatures['recognition'])) : ?>
+                <a class="button" href="<?= e(url('/identify') . '?box=' . $id) ?>"><?= e(t('identify.open')) ?></a>
+            <?php endif; ?>
         </span>
     </div>
     <?php if ($labels !== []) : ?>
@@ -72,6 +75,9 @@ $img = static fn (string $part, int $color): string => url('/img') . '?part=' . 
 <section class="card setup-step">
     <h2><?= e(t('box.labels_heading')) ?></h2>
     <p class="hint"><?= e(t('box.labels_hint')) ?></p>
+    <?php if (!empty($cameraFeatures['ocr'])) : ?>
+        <p><a class="button" href="<?= e(url('/b/' . $id . '/labels/photo')) ?>"><?= e(t('labels_photo.open')) ?></a></p>
+    <?php endif; ?>
     <form method="post" action="<?= e(url('/b/' . $id . '/labels')) ?>" class="form">
         <?= $csrf ?>
         <label for="labels" class="visually-hidden"><?= e(t('box.labels_heading')) ?></label>

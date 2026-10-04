@@ -10,16 +10,16 @@ Background, decisions and their reasons: `docs/decisions.md`. Data model: `docs/
 
 ## Current status
 
-- **Phase:** M0–M4 merged (M4 #19). M1 runs on the host with the Rebrickable API (61,362/64,769 parts and 216/275 colours matched to BrickLink).
-- **Done:** M0 (#8, #10, #14 Hestia layout), browser setup wizard (#9), M1 importer (#12) with Rebrickable API ids (#15), M2 collections and boxes (#13), M3 fast entry (#18), M4 sets (#19).
-- **In progress:** M5 – What can I build (#6): coverage scan over all sets with part equivalence, minifig and colour options, filters; per-set view; builds with reserved parts, pick list by box, finish/cancel; BrickLink wanted-list XML. Migration 0006.
-- **Next:** after M5 is merged, apply migrations 0004–0006 on the host (`/setup` or `bin/migrate`; 0006 rebuilds an inventory index, a few seconds); try M2–M5 there; then M6 – Camera (#7).
+- **Phase:** M0–M5 merged (M5 #20). M1 runs on the host with the Rebrickable API (61,362/64,769 parts and 216/275 colours matched to BrickLink).
+- **Done:** M0 (#8, #10, #14 Hestia layout), browser setup wizard (#9), M1 importer (#12) with Rebrickable API ids (#15), M2 collections and boxes (#13), M3 fast entry (#18), M4 sets (#19), M5 what can I build (#20).
+- **In progress:** M6 – Camera (#7): QR scanner, box labels from a photo with server-side Tesseract, part recognition with Brickognize.
+- **Next:** after M6 is merged, apply migrations 0004–0006 on the host if not done; enable the camera features as described in `docs/deploy-hestia.md` and test OCR on real (handwritten) box lids. M6 is the last milestone of the current roadmap (`docs/milestones.md`).
 - **Open questions:**
-  - PHP on the maintainer's host is 8.3 (`/usr/bin/php8.3`); `proc_open` is disabled there (Composer warns, works).
+  - PHP on the maintainer's host is 8.3 (`/usr/bin/php8.3`); `proc_open` and `shell_exec` are disabled there. OCR needs `exec()` (custom PHP-FPM template, see `docs/deploy-hestia.md`).
   - Rebrickable API format confirmed on the host (2026-10-04); `rebrickable.com` is not reachable from the cloud dev environment unless added to its network allowlist.
   - BrickLink download format is confirmed (tab-delimited Parts with `Alternate Item Number`, Colors); "Include Year" must stay unticked.
-  - Server-side OCR engine (Tesseract first; test on handwritten part numbers in M6).
-  - Brickognize response format: which ID system, whether colour is returned (test call in M6).
+  - OCR accuracy on handwritten part numbers: untested (printed numbers read exactly); check on the host.
+  - Brickognize: answer format confirmed (BrickLink ids, no colour); terms of service still to be read by the maintainer.
 
 ## Hard rules
 

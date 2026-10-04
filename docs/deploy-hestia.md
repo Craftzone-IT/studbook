@@ -86,6 +86,20 @@ Command-line alternative to steps 1–4: `sudo -u USER -H PHP bin/migrate` and `
 
 Details: [catalogue-import.md](catalogue-import.md).
 
+### Camera features (optional)
+
+Both are switched off by default; the Settings page shows whether they work.
+
+**Reading part numbers from photos (OCR)** runs Tesseract on the server:
+
+1. As root: `apt install tesseract-ocr` (the English model comes with it).
+2. PHP must allow `exec()` for this site. Hestia's PHP-FPM templates may list it under `disable_functions`. If the Settings page says *exec() disabled*: copy the PHP-FPM template the domain uses (`/usr/local/hestia/data/templates/web/php-fpm/`, e.g. `default.tpl`) to `studbook.tpl`, remove `exec` from its `disable_functions` line, then choose `studbook` as **Backend template PHP-FPM** in the web domain's advanced options. Only `exec` is needed; Studbook runs nothing but the Tesseract binary named in `.env`, with escaped arguments.
+3. In `.env`: `OCR_ENABLED=true` (and `TESSERACT_BINARY` if `which tesseract` is not `/usr/bin/tesseract`).
+
+**Part recognition** sends the photo of a single part to the Brickognize API (`api.brickognize.com`). Read Brickognize's terms of service first, then set `BRICKOGNIZE_ENABLED=true`. Nothing is installed on the server; the server needs outgoing HTTPS.
+
+Photos are shrunk in the browser before upload; without JavaScript, phone photos can exceed PHP's upload limit. If uploads fail, raise `upload_max_filesize` and `post_max_size` (e.g. 16M) in the domain's PHP settings. Photos are deleted right after reading; nothing is kept.
+
 ## 4. Every update
 
 1. Update the local clone and upload the files (section 2).

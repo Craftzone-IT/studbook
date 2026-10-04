@@ -16,10 +16,17 @@ final class SettingsController
     /** @var \Closure(): SettingRepository */
     private \Closure $settings;
 
-    /** @param callable(): SettingRepository $settings */
-    public function __construct(private readonly View $view, callable $settings)
+    /** @var \Closure(): array<string, mixed> */
+    private \Closure $cameraStatus;
+
+    /**
+     * @param callable(): SettingRepository $settings
+     * @param (callable(): array<string, mixed>)|null $cameraStatus see {@see CameraController::status()}
+     */
+    public function __construct(private readonly View $view, callable $settings, ?callable $cameraStatus = null)
     {
         $this->settings = \Closure::fromCallable($settings);
+        $this->cameraStatus = \Closure::fromCallable($cameraStatus ?? static fn (): array => []);
     }
 
     public function show(Request $request): Response
@@ -28,6 +35,7 @@ final class SettingsController
             'title' => t('settings.title'),
             'languages' => array_keys(Translator::LANGUAGES),
             'now' => new \DateTimeImmutable('now', new \DateTimeZone('UTC')),
+            'camera' => ($this->cameraStatus)(),
         ]));
     }
 
