@@ -81,6 +81,7 @@ Command-line alternative to steps 1–4: `sudo -u USER -H PHP bin/migrate` and `
 
 1. Add the cron job for the catalogue import (Hestia: *Cron jobs*, it runs as `USER`), every 15 minutes:
    `PHP /home/USER/web/DOMAIN/private/bin/import --cron --quiet`
+   The same job also downloads pictures of your parts and sets in advance (`IMAGE_PREFETCH_PER_RUN` in `.env`, 200 per run by default), so pages open with their pictures ready.
 2. Upload your BrickLink parts and colours lists to `DOMAIN/private/storage/catalog/bricklink/`.
 3. Open *Catalogue* in the app and press *Run import now*; it starts within 15 minutes.
 

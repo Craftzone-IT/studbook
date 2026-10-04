@@ -118,6 +118,12 @@ final class App
         if (!$route->public && !$this->auth()->check()) {
             return Response::redirect(url('/login'));
         }
+        if ($route->light) {
+            // Images and small lookups: free the session at once and skip the page set-up below.
+            Session::release();
+
+            return ($route->handler)($request, $params);
+        }
         // After an update, send the logged-in user to /setup until the migrations have run.
         if (!$route->public && $this->setup()->pendingMigrations() !== []) {
             return Response::redirect(url('/setup'));
@@ -266,13 +272,13 @@ final class App
         $this->router->post('/b/{id}/labels', $boxes->labels(...));
         $this->router->get('/b/{id}/add', $boxes->addForm(...));
         $this->router->post('/b/{id}/lots', $boxes->addLot(...));
-        $this->router->get('/b/{id}/qr.svg', $boxes->qr(...));
+        $this->router->get('/b/{id}/qr.svg', $boxes->qr(...), light: true);
         $this->router->post('/lots/{id}/take', $boxes->takeOut(...));
         $this->router->post('/lots/{id}/move', $boxes->move(...));
         $this->router->get('/b/{id}/entry', $entry->page(...));
         $this->router->post('/b/{id}/entry', $entry->add(...));
-        $this->router->get('/b/{id}/entry/part', $entry->part(...));
-        $this->router->get('/b/{id}/entry/search', $entry->search(...));
+        $this->router->get('/b/{id}/entry/part', $entry->part(...), light: true);
+        $this->router->get('/b/{id}/entry/search', $entry->search(...), light: true);
         $this->router->get('/b/{id}/pick', $picker->page(...));
         $this->router->get('/search', $searchPage->page(...));
         $this->router->get('/history', $history->page(...));
@@ -291,7 +297,7 @@ final class App
         $this->router->post('/builds/{id}/release', $buildPages->release(...));
         $this->router->post('/builds/{id}/finish', $buildPages->finish(...));
         $this->router->get('/builds/{id}/wanted.xml', $buildPages->buildWanted(...));
-        $this->router->get('/img', $images->show(...));
+        $this->router->get('/img', $images->show(...), light: true);
         $this->router->post('/batches/{id}/undo', $batches->undo(...));
         $this->router->get('/settings', $settings->show(...));
         $this->router->post('/settings', $settings->save(...));

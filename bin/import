@@ -7,9 +7,12 @@ declare(strict_types=1);
 // Usage:
 //   php bin/import          run an import now
 //   php bin/import --cron   for cron (e.g. every 15 minutes): runs an import queued from
-//                           the admin page, or a scheduled one every IMPORT_SCHEDULE_DAYS
+//                           the admin page, or a scheduled one every IMPORT_SCHEDULE_DAYS,
+//                           then downloads up to IMAGE_PREFETCH_PER_RUN pictures in advance
 //   php bin/import --quiet  only print errors
 
+use Studbook\Catalog\ImageCache;
+use Studbook\Catalog\ImageWarmer;
 use Studbook\Catalog\ImportRunRepository;
 use Studbook\Catalog\ImportService;
 use Studbook\Cli\Console;
@@ -31,8 +34,21 @@ $output = static function (string $line) use ($quiet): void {
 ini_set('memory_limit', '512M');
 set_time_limit(0);
 
-$status = in_array('--cron', $args, true)
-    ? $service->cron($output)
-    : $service->runNow('cli', $output);
+$cron = in_array('--cron', $args, true);
+$status = $cron ? $service->cron($output) : $service->runNow('cli', $output);
+
+if ($cron) {
+    try {
+        $images = new ImageCache(
+            $pdo,
+            $config->path('IMAGE_CACHE_PATH', 'storage/images'),
+            'Studbook (+' . $config->get('APP_SOURCE_URL', 'https://github.com/Craftzone-IT/studbook') . ')'
+        );
+        (new ImageWarmer($pdo, $images, $config->int('IMAGE_PREFETCH_PER_RUN', ImageWarmer::DEFAULT_PER_RUN)))
+            ->run($output);
+    } catch (Throwable $e) {
+        $output('ERROR: pictures not downloaded in advance: ' . $e->getMessage());
+    }
+}
 
 exit($status === ImportRunRepository::FAILED ? 1 : 0);

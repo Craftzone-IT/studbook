@@ -34,6 +34,17 @@ final class Session
         session_start();
     }
 
+    /**
+     * Writes the session and releases its lock. PHP keeps the session file locked for the whole
+     * request, so without this every image of a page would wait for the one before it.
+     */
+    public static function release(): void
+    {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+    }
+
     public static function get(string $key, mixed $default = null): mixed
     {
         return $_SESSION[$key] ?? $default;

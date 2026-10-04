@@ -11,6 +11,10 @@ use PDO;
  * IMAGE_CACHE_PATH afterwards. A missing image (no URL, HTTP 404) is
  * retried after a week, a temporary failure (timeout, server error) after an
  * hour, so neither causes a request on every page view.
+ *
+ * At most MAX_PARALLEL downloads run at a time. A request that finds all
+ * download slots taken gets no image at once (`lastMiss` = `busy`) instead
+ * of waiting, so a page full of new images cannot tie up every PHP worker.
  */
 final class ImageCache
 {
@@ -21,6 +25,7 @@ final class ImageCache
     public const RETRY_MISSING_HOURS = 24 * 7;
     public const RETRY_ERROR_HOURS = 1;
     public const MAX_BYTES = 2_000_000;
+    public const MAX_PARALLEL = 3;
     private const ALLOWED_TYPES = [
         'image/jpeg' => 'jpg',
         'image/png' => 'png',
@@ -30,6 +35,8 @@ final class ImageCache
 
     /** @var \Closure(string): array{body: string, content_type: string} */
     private \Closure $fetch;
+    /** Why the last get() returned null: `missing` (no image exists), `error` or `busy` (try again later). */
+    public ?string $lastMiss = null;
 
     /**
      * @param (callable(string $url): array{body: string, content_type: string})|null $fetch
@@ -47,6 +54,7 @@ final class ImageCache
     /** @return array{path: string, content_type: string}|null null when no image is available */
     public function get(string $part, int $colorId): ?array
     {
+        $this->lastMiss = null;
         $stmt = $this->pdo->prepare(
             'SELECT file, content_type, status, fetched_at FROM cat_image_cache WHERE part = ? AND color_id = ?'
         );
@@ -62,6 +70,8 @@ final class ImageCache
             $hours = $cached['status'] === 'missing' ? self::RETRY_MISSING_HOURS : self::RETRY_ERROR_HOURS;
             $retryAfter = strtotime((string) $cached['fetched_at'] . ' UTC') + $hours * 3600;
             if ($cached['status'] !== 'ok' && time() < $retryAfter) {
+                $this->lastMiss = $cached['status'] === 'missing' ? 'missing' : 'error';
+
                 return null;
             }
         }
@@ -69,6 +79,13 @@ final class ImageCache
         $url = $this->sourceUrl($part, $colorId);
         if ($url === null) {
             $this->remember($part, $colorId, null, null, 'missing');
+            $this->lastMiss = 'missing';
+
+            return null;
+        }
+        $slot = $this->takeSlot();
+        if ($slot === null) {
+            $this->lastMiss = 'busy';
 
             return null;
         }
@@ -93,14 +110,45 @@ final class ImageCache
             return ['path' => $path, 'content_type' => $type];
         } catch (ImageNotFound) {
             $this->remember($part, $colorId, null, null, 'missing');
+            $this->lastMiss = 'missing';
 
             return null;
         } catch (\Throwable $e) {
             error_log(sprintf('Studbook: image %s/%d not fetched: %s', $part, $colorId, $e->getMessage()));
             $this->remember($part, $colorId, null, null, 'error');
+            $this->lastMiss = 'error';
 
             return null;
+        } finally {
+            flock($slot, LOCK_UN);
+            fclose($slot);
         }
+    }
+
+    /**
+     * One of MAX_PARALLEL download slots (file locks, released when the request ends even if
+     * it crashes); null when all are in use.
+     *
+     * @return resource|null
+     */
+    private function takeSlot()
+    {
+        $dir = $this->directory . '/.locks';
+        if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
+            return null;
+        }
+        for ($i = 0; $i < self::MAX_PARALLEL; $i++) {
+            $handle = @fopen($dir . '/fetch-' . $i . '.lock', 'c');
+            if ($handle === false) {
+                continue;
+            }
+            if (flock($handle, LOCK_EX | LOCK_NB)) {
+                return $handle;
+            }
+            fclose($handle);
+        }
+
+        return null;
     }
 
     /** Image URL from the catalogue; for "any colour" the first colour with an image. */
@@ -149,7 +197,7 @@ final class ImageCache
     private function httpFetch(string $url): array
     {
         if (!extension_loaded('curl')) {
-            $context = stream_context_create(['http' => ['timeout' => 10, 'user_agent' => $this->userAgent]]);
+            $context = stream_context_create(['http' => ['timeout' => 6, 'user_agent' => $this->userAgent]]);
             $body = @file_get_contents($url, false, $context, 0, self::MAX_BYTES + 1);
             if ($body === false) {
                 if (preg_match('#^HTTP/\S+ (404|410)#', (string) ($http_response_header[0] ?? ''))) {
@@ -170,8 +218,8 @@ final class ImageCache
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_FOLLOWLOCATION => false,
-            CURLOPT_CONNECTTIMEOUT => 5,
-            CURLOPT_TIMEOUT => 10,
+            CURLOPT_CONNECTTIMEOUT => 3,
+            CURLOPT_TIMEOUT => 6,
             CURLOPT_USERAGENT => $this->userAgent,
             CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
         ]);
