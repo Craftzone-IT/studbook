@@ -8,7 +8,7 @@ use Studbook\Http\Csrf;
  * @var string $title
  * @var array<string, mixed> $box
  * @var array{rb_num: string, bl_num: ?string, name: string, display: string} $part
- * @var list<array{id: int, name: string, rgb: string}> $colors
+ * @var list<array{id: int, name: string, rgb: string, part: string}> $colors part = Rebrickable part stored for the colour
  * @var list<array{id: int, name: string}> $hint boxes labelled for this part (when this one is not)
  */
 $id = (int) $box['id'];
@@ -38,7 +38,7 @@ $id = (int) $box['id'];
                 <?php foreach ($colors as $i => $color) : ?>
                     <label class="color-option">
                         <input type="radio" name="color" value="<?= e($color['id']) ?>" required<?= $i === 0 ? ' autofocus' : '' ?>>
-                        <img class="part-img" src="<?= e(url('/img') . '?part=' . rawurlencode($part['rb_num']) . '&color=' . $color['id']) ?>" alt="" width="48" height="48" loading="lazy">
+                        <img class="part-img" src="<?= e(url('/img') . '?part=' . rawurlencode($color['part'] ?? $part['rb_num']) . '&color=' . $color['id']) ?>" alt="" width="48" height="48" loading="lazy">
                         <?= swatch($color['rgb']) ?>
                         <?= e($color['name']) ?>
                     </label>

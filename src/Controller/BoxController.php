@@ -178,12 +178,11 @@ final class BoxController
         $id = (int) $params['id'];
         $part = ($this->catalog)()->resolvePart($request->input('part'));
         $colorId = $request->input('color');
-        $valid = $part !== null && preg_match('/^\d+$/', $colorId) === 1 && in_array(
-            (int) $colorId,
-            array_column(($this->catalog)()->colorsForPart($part['rb_num']), 'id'),
-            true
-        );
-        if (!$valid) {
+        // The part actually stored may be another Rebrickable part with the same BrickLink number.
+        $stored = $part !== null && preg_match('/^\d+$/', $colorId) === 1
+            ? ($this->catalog)()->partForColor($part['rb_num'], (int) $colorId)
+            : null;
+        if ($stored === null) {
             Session::flash('error', t('box.color_required'));
 
             return Response::redirect(url('/b/' . $id));
@@ -193,7 +192,7 @@ final class BoxController
             $id,
             fn (): int => ($this->owned)()->addLot(
                 $id,
-                $part['rb_num'],
+                $stored,
                 (int) $colorId,
                 (int) $request->input('qty', '1')
             ),

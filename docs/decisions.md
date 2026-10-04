@@ -56,6 +56,12 @@ Record of product and technical decisions made during planning (October 2026). A
 - Backups: HestiaCP's built-in backup is sufficient (catalogue data can always be re-imported).
 - Development on GitHub; code written by Claude Code; issue → PR → review → merge. ~~Automatic deploy via GitHub Actions.~~ Superseded 2026-10-03: deployment is manual (see below).
 
+## One BrickLink number, several Rebrickable parts (2026-10-04)
+
+- **Problem found on the host:** entering BrickLink 3003 did not offer Trans-Dark Blue or Glitter Trans-Dark Pink. Rebrickable keeps transparent 2 x 2 bricks as a separate mould, 6223, which BrickLink lists as 3003.
+- **Decision:** the colour list of a part covers all Rebrickable parts with the same BrickLink number (`CatalogRepository::colorsForPart`), and each colour carries the Rebrickable part that exists in it; that part is what gets stored (entry, "add here", set deltas). The chosen part keeps its own colours; otherwise the most used one wins. Search lists a BrickLink number once.
+- Internal keys stay Rebrickable ids, so inventories and "what can I build" are unaffected (6223 and 3003 are also mould variants there).
+
 ## M6 camera (2026-10-04)
 
 - **QR scanner** (`/scan`): the browser's `BarcodeDetector` where available (Chrome on Android), otherwise the bundled jsQR 1.4.0 (Apache-2.0, `public/assets/vendor/jsqr/`, loaded only then; no build step). Only the box number is taken from a code and the scanner always navigates within the site. The phone's own camera app opens `/b/{id}` as well; the scanner saves switching apps.

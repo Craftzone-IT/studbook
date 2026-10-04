@@ -175,7 +175,7 @@
         }
         colors.forEach((c) => {
             colorList.append(el('li', {}, [el('a', { class: 'pick-item', href: '#', 'data-color': String(c.id), role: 'option' }, [
-                el('img', { class: 'part-img', src: img(part.rb_num, c.id), alt: '', width: '40', height: '40', loading: 'lazy' }),
+                el('img', { class: 'part-img', src: img(c.part || part.rb_num, c.id), alt: '', width: '40', height: '40', loading: 'lazy' }),
                 swatch(c.rgb),
                 el('span', { text: c.name }),
             ])]));

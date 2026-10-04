@@ -69,21 +69,76 @@ final class CatalogRepository
     /**
      * Colours the part exists in, the most common (in the most sets) first.
      *
-     * @return list<array{id: int, name: string, rgb: string}>
+     * The UI shows BrickLink numbers, and one BrickLink number can stand for
+     * several Rebrickable parts (e.g. BrickLink 3003 is Rebrickable 3003 in
+     * solid colours and 6223 in transparent ones). So the colours of all
+     * parts with the same BrickLink number are offered; `part` is the
+     * Rebrickable part to store for that colour (the given one when it has it).
+     *
+     * @return list<array{id: int, name: string, rgb: string, part: string}>
      */
     public function colorsForPart(string $rbNum): array
     {
+        $parts = $this->siblingParts($rbNum);
+        $marks = implode(',', array_fill(0, count($parts), '?'));
         $stmt = $this->pdo->prepare(
-            'SELECT c.rb_id, c.name, c.bl_name, c.rgb FROM cat_part_color pc
+            "SELECT c.rb_id, c.name, c.bl_name, c.rgb, pc.part, COALESCE(u.n, 0) AS n FROM cat_part_color pc
              JOIN cat_color c ON c.rb_id = pc.color_id
-             LEFT JOIN (SELECT color_id, COUNT(*) AS n FROM cat_inventory WHERE part = ? GROUP BY color_id) u
-               ON u.color_id = pc.color_id
-             WHERE pc.part = ? AND c.rb_id >= 0
-             ORDER BY COALESCE(u.n, 0) DESC, COALESCE(c.bl_name, c.name)'
+             LEFT JOIN (SELECT part, color_id, COUNT(*) AS n FROM cat_inventory WHERE part IN ({$marks})
+                        GROUP BY part, color_id) u ON u.part = pc.part AND u.color_id = pc.color_id
+             WHERE pc.part IN ({$marks}) AND c.rb_id >= 0"
+        );
+        $stmt->execute([...$parts, ...$parts]);
+        $colors = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $id = (int) $row['rb_id'];
+            $colors[$id] ??= self::color($row) + ['n' => 0, 'parts' => []];
+            $colors[$id]['n'] += (int) $row['n'];
+            $colors[$id]['parts'][(string) $row['part']] = (int) $row['n'];
+        }
+        usort($colors, static fn (array $a, array $b): int => [-$a['n'], $a['name']] <=> [-$b['n'], $b['name']]);
+
+        $result = [];
+        foreach ($colors as $color) {
+            // The chosen part itself when it exists in this colour, else the most used sibling.
+            $part = $rbNum;
+            if (!array_key_exists($rbNum, $color['parts'])) {
+                arsort($color['parts']);
+                $part = (string) array_key_first($color['parts']);
+            }
+            $result[] = ['id' => $color['id'], 'name' => $color['name'], 'rgb' => $color['rgb'], 'part' => $part];
+        }
+
+        return $result;
+    }
+
+    /** The Rebrickable part to store for a part chosen by the user in a colour; null when it does not exist so. */
+    public function partForColor(string $rbNum, int $colorId): ?string
+    {
+        foreach ($this->colorsForPart($rbNum) as $color) {
+            if ($color['id'] === $colorId) {
+                return $color['part'];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Rebrickable parts with the same BrickLink number as the given one, the given one first.
+     *
+     * @return non-empty-list<string>
+     */
+    public function siblingParts(string $rbNum): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT p.rb_num FROM cat_part p
+             JOIN cat_part o ON o.rb_num = ? AND o.bl_num IS NOT NULL AND p.bl_num = o.bl_num
+             WHERE p.rb_num <> ? ORDER BY p.popularity DESC, p.rb_num'
         );
         $stmt->execute([$rbNum, $rbNum]);
 
-        return array_map(self::color(...), $stmt->fetchAll(PDO::FETCH_ASSOC));
+        return [$rbNum, ...array_map('strval', $stmt->fetchAll(PDO::FETCH_COLUMN))];
     }
 
     /** @return array<int, array{id: int, name: string, rgb: string}> */
