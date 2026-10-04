@@ -56,6 +56,11 @@ Record of product and technical decisions made during planning (October 2026). A
 - Backups: HestiaCP's built-in backup is sufficient (catalogue data can always be re-imported).
 - Development on GitHub; code written by Claude Code; issue → PR → review → merge. ~~Automatic deploy via GitHub Actions.~~ Superseded 2026-10-03: deployment is manual (see below).
 
+## Part numbers written on boxes automatically (2026-10-04)
+
+- Adding parts to a box (add form, fast entry) or moving parts into it writes the part number on the box, in the same batch, so undo takes it back. It is skipped when the box already has it, also as another Rebrickable part with the same BrickLink number; the label uses the usual part for that BrickLink number (3003, not the transparent 6223).
+- **Not on the Inbox**, which is a temporary place: otherwise "Where does this go?" would point everything there. Breaking up a set does not label the chosen box either (it would add hundreds of numbers at once); parts sorted into labelled boxes are already labelled there.
+
 ## Pictures without blocking the site (2026-10-04)
 
 - **Problem found on the host:** a page with many pictures not cached yet made the whole site hang. Every `/img` request held the PHP session lock for its whole run (so the pictures of a page, and the next click, waited for each other) and downloaded from Rebrickable inside the request; with HTTP/2 the browser asks for many at once, which used up every PHP-FPM worker.

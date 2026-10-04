@@ -190,7 +190,7 @@ return [
     'box.move_to' => 'Move to box',
     'box.move_submit' => 'Move',
     'box.labels_heading' => 'Part numbers on the box',
-    'box.labels_hint' => 'The part numbers written on the box lid, separated by spaces or new lines (BrickLink or Rebrickable numbers). They appear as quick-pick tiles above and on the printed label.',
+    'box.labels_hint' => 'The part numbers written on the box lid, separated by spaces or new lines (BrickLink or Rebrickable numbers). They appear as quick-pick tiles above and on the printed label. Parts you put into the box are added automatically (except in the Inbox).',
     'box.labels_save' => 'Save part numbers',
     'box.labels_saved' => 'Part numbers saved.',
     'box.labels_unknown' => 'Not found in the catalogue: {parts}. Nothing was saved; correct the numbers and save again.',
