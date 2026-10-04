@@ -16,7 +16,9 @@ Rebrickable's CSV downloads contain no BrickLink ids, so without the API the imp
 
 1. Log in at rebrickable.com, open **Settings → API**, and generate a key (free).
 2. Put it in `.env`: `REBRICKABLE_API_KEY=…` (never commit it, never share it).
-3. Run the import. It reads `/api/v3/lego/parts/?inc_part_details=1` and `/api/v3/lego/colors/` (about 70 requests of 1,000 items, spaced out by a second, honouring HTTP 429) and caches the result as `api_parts.json` / `api_colors.json` next to the CSV downloads for a day.
+3. Run the import. It reads `/api/v3/lego/parts/?inc_part_details=1` and `/api/v3/lego/colors/` (about 70 requests of 1,000 items, spaced out by a second, honouring HTTP 429) and caches the result as `api_parts.json` / `api_colors.json` next to the CSV downloads for a day. Rebrickable needs about 17 seconds per page of 1,000 parts, so a refresh adds about 20 minutes to the import (progress is logged per page); imports within the next 24 hours reuse the cache and take about 2 minutes.
+
+On the maintainer's instance the API raised the BrickLink matches from 11,844 to 61,362 of 64,769 parts and from 147 to 216 of 275 colours (the rest are mostly special ranges such as HO, Modulex and Duplo colours).
 
 If the key is missing, rejected or the API is down, the import still runs and falls back to the BrickLink files (or an older cached API result).
 

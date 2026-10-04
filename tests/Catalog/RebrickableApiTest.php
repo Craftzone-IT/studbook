@@ -52,6 +52,7 @@ final class RebrickableApiTest extends TestCase
         self::assertStringContainsString('lego/parts/?inc_part_details=1&page_size=1000', $this->requests[0]['url']);
         self::assertSame('key secret-key', $this->requests[0]['headers']['Authorization']);
         self::assertSame([1.1], $this->sleeps, 'requests are spaced out');
+        self::assertContains('Rebrickable API api_parts: page 1/1', $this->log, 'progress is logged per page');
     }
 
     public function testColoursCarryBrickLinkIdsAndNames(): void

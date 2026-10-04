@@ -10,7 +10,9 @@ namespace Studbook\Catalog;
  * which the CSV downloads do not contain. Needs the user's own free API key.
  *
  * Results are cached as JSON next to the CSV downloads and fetched again at
- * most once per day (like the downloads). Requests are spaced out and HTTP
+ * most once per day (like the downloads). Rebrickable answers a page of 1,000
+ * parts in about 17 seconds, so a full refresh takes about 20 minutes; every
+ * page is logged so the import does not look stuck. Requests are spaced out and HTTP
  * 429 responses are honoured. If fetching fails, an older cache is used.
  */
 final class RebrickableApi
@@ -125,6 +127,8 @@ final class RebrickableApi
                     ($this->sleep)(self::PAUSE_SECONDS);
                 }
                 $data = $this->request($url);
+                $pages = (int) ceil(max(1, (int) ($data['count'] ?? 0)) / self::PAGE_SIZE);
+                $log(sprintf('Rebrickable API %s: page %d/%d', $name, $page + 1, $pages));
                 foreach ((array) ($data['results'] ?? []) as $row) {
                     $pair = is_array($row) ? $map($row) : null;
                     if ($pair !== null) {

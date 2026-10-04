@@ -10,13 +10,13 @@ Background, decisions and their reasons: `docs/decisions.md`. Data model: `docs/
 
 ## Current status
 
-- **Phase:** M0 installed and closed (#1). M1 runs on the host; BrickLink matching is being improved before #2 can close. M2 merged (#13), to be tried on the host.
-- **Done:** M0 (#8, #10, #14 Hestia layout), browser setup wizard (#9), M1 importer (#12), M2 collections and boxes (#13).
-- **In progress:** Rebrickable API for official BrickLink ids (`REBRICKABLE_API_KEY`). First real import matched only 147/275 colours and 11,844/64,769 parts by number (prints and mould variants differ); see `docs/decisions.md`.
-- **Next:** maintainer sets the API key and re-runs the import; check the match report (closes #2); cron and "Run import now" on the host; try M2 on the host; then M3 – Fast entry (#4).
+- **Phase:** M0 installed and closed (#1). M1 runs on the host with the Rebrickable API (61,362/64,769 parts and 216/275 colours matched to BrickLink); #2 closes after the queued "Run import now" succeeds via cron. M2 merged (#13), to be tried on the host.
+- **Done:** M0 (#8, #10, #14 Hestia layout), browser setup wizard (#9), M1 importer (#12) with Rebrickable API ids (#15), M2 collections and boxes (#13).
+- **In progress:** per-page progress log for the API refresh (~17 s per page, ~20 min per refresh).
+- **Next:** try M2 on the host; then M3 – Fast entry (#4).
 - **Open questions:**
   - PHP on the maintainer's host is 8.3 (`/usr/bin/php8.3`); `proc_open` is disabled there (Composer warns, works).
-  - Rebrickable API response format is implemented from the documentation and tested with fixtures only (`rebrickable.com` is not reachable from the cloud dev environment); confirm with the first real run on the host.
+  - Rebrickable API format confirmed on the host (2026-10-04); `rebrickable.com` is not reachable from the cloud dev environment unless added to its network allowlist.
   - BrickLink download format is confirmed (tab-delimited Parts with `Alternate Item Number`, Colors); "Include Year" must stay unticked.
   - Server-side OCR engine (Tesseract first; test on handwritten part numbers in M6).
   - Brickognize response format: which ID system, whether colour is returned (test call in M6).
