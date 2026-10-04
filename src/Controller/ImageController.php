@@ -14,6 +14,8 @@ use Studbook\Http\Response;
  */
 final class ImageController
 {
+    public const PENDING = '/assets/img-pending.svg';
+
     /** @var \Closure(): ImageCache */
     private \Closure $cache;
 
@@ -34,7 +36,13 @@ final class ImageController
         if ($part === '' || strlen($part) > 64 || !preg_match('/^-?\d+$/', $color)) {
             return self::placeholder();
         }
-        $image = ($this->cache)()->get($part, (int) $color);
+        $cache = ($this->cache)();
+        $image = $cache->get($part, (int) $color);
+        if ($image === null && $cache->lastMiss !== 'missing') {
+            // Not fetched yet (all download slots busy, or a temporary error): a "pending" picture
+            // that is never cached; assets/app.js asks again a little later.
+            return Response::redirect(url(self::PENDING))->withHeader('Cache-Control', 'no-store');
+        }
         if ($image === null) {
             return self::placeholder();
         }
@@ -54,7 +62,8 @@ final class ImageController
             . '<rect x="11" y="9" width="7" height="6" rx="1.5" fill="#d6d6d0"/>'
             . '<rect x="22" y="9" width="7" height="6" rx="1.5" fill="#d6d6d0"/></svg>';
 
+        // Only for images that do not exist; the cache retries those after a week.
         return (new Response($svg, 200, ['Content-Type' => 'image/svg+xml']))
-            ->withHeader('Cache-Control', 'private, max-age=3600');
+            ->withHeader('Cache-Control', 'private, max-age=86400');
     }
 }

@@ -15,9 +15,9 @@ final class Router
     private array $routes = [];
 
     /** @param callable(Request, array<string, string>): Response $handler */
-    public function get(string $pattern, callable $handler, bool $public = false): void
+    public function get(string $pattern, callable $handler, bool $public = false, bool $light = false): void
     {
-        $this->routes[] = new Route('GET', $pattern, $handler, $public);
+        $this->routes[] = new Route('GET', $pattern, $handler, $public, $light);
     }
 
     /** @param callable(Request, array<string, string>): Response $handler */

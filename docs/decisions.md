@@ -56,6 +56,13 @@ Record of product and technical decisions made during planning (October 2026). A
 - Backups: HestiaCP's built-in backup is sufficient (catalogue data can always be re-imported).
 - Development on GitHub; code written by Claude Code; issue → PR → review → merge. ~~Automatic deploy via GitHub Actions.~~ Superseded 2026-10-03: deployment is manual (see below).
 
+## Pictures without blocking the site (2026-10-04)
+
+- **Problem found on the host:** a page with many pictures not cached yet made the whole site hang. Every `/img` request held the PHP session lock for its whole run (so the pictures of a page, and the next click, waited for each other) and downloaded from Rebrickable inside the request; with HTTP/2 the browser asks for many at once, which used up every PHP-FPM worker.
+- **Light routes:** `/img`, the QR SVG and the small entry lookups release the session right after the login check and skip the page set-up (migration check, user, flash messages; image requests used to consume the flash message of the page).
+- **At most three downloads at a time** (file locks under `IMAGE_CACHE_PATH/.locks`, released even if PHP dies), with 3 s connect / 6 s total timeouts. A request that finds no free slot gets a redirect to a "pending" picture at once (`no-store`); `assets/app.js` asks again up to five times with growing pauses. Pictures that do not exist get the plain placeholder, cached for a day.
+- **Downloaded in advance by cron:** `bin/import --cron` (every 15 minutes) fetches up to `IMAGE_PREFETCH_PER_RUN` (default 200) missing pictures, one at a time with a short pause: loose lots, box labels, set pictures, then the contents of owned sets. It stops when the web pages are downloading.
+
 ## One BrickLink number, several Rebrickable parts (2026-10-04)
 
 - **Problem found on the host:** entering BrickLink 3003 did not offer Trans-Dark Blue or Glitter Trans-Dark Pink. Rebrickable keeps transparent 2 x 2 bricks as a separate mould, 6223, which BrickLink lists as 3003.

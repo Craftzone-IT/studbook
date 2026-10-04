@@ -109,6 +109,30 @@ final class ImageCacheTest extends OwnedTestCase
         self::assertFalse(ImageCache::isAllowedUrl('https://cdn.rebrickable.com:8443/x.jpg'));
     }
 
+    public function testBusySlotsAnswerAtOnceWithoutRemembering(): void
+    {
+        $cache = $this->cache(fn (string $url): array => $this->serve($url, 'image/jpeg'));
+        mkdir($this->dir . '/.locks', 0775, true);
+        $held = [];
+        for ($i = 0; $i < ImageCache::MAX_PARALLEL; $i++) {
+            $held[$i] = fopen($this->dir . '/.locks/fetch-' . $i . '.lock', 'c');
+            flock($held[$i], LOCK_EX);
+        }
+        // flock() locks belong to the file description, so a second fopen() in the same
+        // process sees them as taken, like another PHP worker would.
+        self::assertNull($cache->get('3001', 4));
+        self::assertSame('busy', $cache->lastMiss);
+        self::assertSame([], $this->requested, 'nothing is downloaded while all slots are busy');
+        self::assertSame(0, $this->rowCount('cat_image_cache'), 'a busy answer is not remembered');
+
+        flock($held[1], LOCK_UN);
+        self::assertNotNull($cache->get('3001', 4), 'a free slot is used');
+        self::assertNull($cache->lastMiss);
+        self::assertNull($cache->get('3024', 4));
+        self::assertSame('missing', $cache->lastMiss, 'no image URL for this colour');
+        array_map('fclose', $held);
+    }
+
     private function cache(callable $fetch): ImageCache
     {
         return new ImageCache($this->pdo, $this->dir, 'test', $fetch);

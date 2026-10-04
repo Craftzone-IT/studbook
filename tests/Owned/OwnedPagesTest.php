@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Studbook\Tests\Owned;
 
 use Studbook\App;
+use Studbook\Catalog\ImageCache;
+use Studbook\Controller\ImageController;
 use Studbook\Auth\UserRepository;
 use Studbook\Config;
 use Studbook\Http\Csrf;
@@ -174,6 +176,41 @@ final class OwnedPagesTest extends OwnedTestCase
 
         self::assertSame(200, $image->status);
         self::assertSame('image/svg+xml', $image->header('Content-Type'));
+    }
+
+    public function testImageRequestsLeaveTheSessionAlone(): void
+    {
+        $this->login();
+        $created = $this->post('/collections', ['name' => 'Mine']);
+        $this->get('/img?part=3024&color=71');
+        $this->get('/img?part=3024&color=71');
+        self::assertStringContainsString(
+            'Undo',
+            $this->get((string) $created->header('Location'))->body,
+            'the message of the last change is still shown after the page loaded its pictures'
+        );
+    }
+
+    public function testBusyDownloadsAnswerWithAPendingPicture(): void
+    {
+        $this->login();
+        $locks = sys_get_temp_dir() . '/studbook-img-unused/.locks';
+        if (!is_dir($locks)) {
+            mkdir($locks, 0775, true);
+        }
+        $held = [];
+        for ($i = 0; $i < ImageCache::MAX_PARALLEL; $i++) {
+            $held[] = $handle = fopen($locks . '/fetch-' . $i . '.lock', 'c');
+            flock($handle, LOCK_EX);
+        }
+        try {
+            $image = $this->get('/img?part=3001&color=4');
+        } finally {
+            array_map('fclose', $held);
+        }
+        self::assertSame(303, $image->status);
+        self::assertSame(ImageController::PENDING, $image->header('Location'));
+        self::assertSame('no-store', $image->header('Cache-Control'));
     }
 
     private function login(): void
