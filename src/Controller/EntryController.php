@@ -138,10 +138,11 @@ final class EntryController
         $catalog = ($this->catalog)();
         $part = $catalog->resolvePart($request->input('part'));
         $colorId = $request->input('color');
-        if (
-            $part === null || !preg_match('/^\d+$/', $colorId)
-            || !in_array((int) $colorId, array_column($catalog->colorsForPart($part['rb_num']), 'id'), true)
-        ) {
+        // The part actually stored may be another Rebrickable part with the same BrickLink number.
+        $stored = $part !== null && preg_match('/^\d+$/', $colorId)
+            ? $catalog->partForColor($part['rb_num'], (int) $colorId)
+            : null;
+        if ($part === null || $stored === null) {
             return Response::json(['error' => t('box.color_required')], 422);
         }
         $sessions = Session::get(self::SESSION_KEY, []);
@@ -149,7 +150,7 @@ final class EntryController
         try {
             $result = ($this->owned)()->addLotInSession(
                 (int) $box['id'],
-                $part['rb_num'],
+                $stored,
                 (int) $colorId,
                 (int) $request->input('qty', '1'),
                 $current['batch'] ?? null

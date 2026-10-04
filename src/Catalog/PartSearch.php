@@ -134,8 +134,15 @@ final class PartSearch
             max(1, min(200, $limit))
         ));
         $stmt->execute($params);
+        $seen = [];
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
             $bl = $row['bl_num'] !== null ? (string) $row['bl_num'] : null;
+            // Several Rebrickable parts can share a BrickLink number (3003 and 6223); show it once,
+            // its colour list covers all of them.
+            if ($bl !== null && isset($seen['b:' . $bl])) {
+                continue;
+            }
+            $seen['b:' . $bl] = true;
             $result['parts'][] = [
                 'rb_num' => (string) $row['rb_num'],
                 'bl_num' => $bl,

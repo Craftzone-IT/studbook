@@ -9,7 +9,7 @@ use Studbook\Http\Csrf;
  * @var array<string, mixed> $set
  * @var array{rb_num: string, bl_num: ?string, name: string, display: string} $part
  * @var string $kind missing|extra
- * @var list<array{id: int, name: string, rgb: string}> $colors
+ * @var list<array{id: int, name: string, rgb: string, part: string}> $colors part = Rebrickable part stored for the colour
  * @var array<int, int> $inSet colour id => quantity the set has
  * @var int $selected preselected colour id
  * @var \Studbook\I18n\Formatter $fmt
@@ -38,7 +38,7 @@ $first = in_array($selected, array_column($colors, 'id'), true) ? $selected : ($
                 <?php foreach ($colors as $color) : ?>
                     <label class="color-option">
                         <input type="radio" name="color" value="<?= e($color['id']) ?>" required<?= $color['id'] === $first ? ' checked autofocus' : '' ?>>
-                        <img class="part-img" src="<?= e(url('/img') . '?part=' . rawurlencode($part['rb_num']) . '&color=' . $color['id']) ?>" alt="" width="48" height="48" loading="lazy">
+                        <img class="part-img" src="<?= e(url('/img') . '?part=' . rawurlencode($color['part'] ?? $part['rb_num']) . '&color=' . $color['id']) ?>" alt="" width="48" height="48" loading="lazy">
                         <?= swatch($color['rgb']) ?>
                         <?= e($color['name']) ?>
                         <?php if (isset($inSet[$color['id']])) : ?>

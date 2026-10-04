@@ -201,10 +201,8 @@ final class SetController
         }
         $kind = $request->query('kind') === 'extra' ? 'extra' : 'missing';
         $inSet = [];
-        foreach (($this->sets)()->contents((int) $set['id']) as $row) {
-            if ($row['part'] === $part['rb_num']) {
-                $inSet[$row['color_id']] = $row['qty'];
-            }
+        foreach ($this->inSet((int) $set['id'], $part['rb_num']) as $colorId => $row) {
+            $inSet[$colorId] = $row['qty'];
         }
         $colors = $catalog->colorsForPart($part['rb_num']);
         if ($kind === 'missing') {
@@ -235,13 +233,47 @@ final class SetController
             return Response::redirect(url('/s/' . $id));
         }
         $qty = max(0, (int) $request->input('qty', '1'));
-        $change = $request->input('kind') === 'extra' ? $qty : -$qty;
+        $extra = $request->input('kind') === 'extra';
+        // Store under the Rebrickable part the set (or the catalogue) has in this colour; one
+        // BrickLink number can stand for several Rebrickable parts.
+        $stored = $extra
+            ? $catalog->partForColor($part['rb_num'], (int) $colorId)
+            : ($this->inSet($id, $part['rb_num'])[(int) $colorId]['part'] ?? $part['rb_num']);
+        if ($stored === null) {
+            Session::flash('error', t('box.color_required'));
+
+            return Response::redirect(url('/s/' . $id));
+        }
 
         return $this->act(
             $id,
-            fn (): int => ($this->sets)()->changeDelta($id, $part['rb_num'], (int) $colorId, $change),
+            fn (): int => ($this->sets)()->changeDelta($id, $stored, (int) $colorId, $extra ? $qty : -$qty),
             'set.delta_saved'
         );
+    }
+
+    /**
+     * What the set contains of a part (or of parts with the same BrickLink number), per colour.
+     *
+     * @return array<int, array{qty: int, part: string}>
+     */
+    private function inSet(int $setId, string $rbNum): array
+    {
+        $parts = ($this->catalog)()->siblingParts($rbNum);
+        $result = [];
+        foreach (($this->sets)()->contents($setId) as $row) {
+            if (!in_array($row['part'], $parts, true)) {
+                continue;
+            }
+            $current = $result[$row['color_id']] ?? null;
+            if ($current === null || $row['part'] === $rbNum) {
+                $result[$row['color_id']] = ['qty' => $row['qty'] + ($current['qty'] ?? 0), 'part' => $row['part']];
+            } else {
+                $result[$row['color_id']]['qty'] += $row['qty'];
+            }
+        }
+
+        return $result;
     }
 
     /** @param array<string, string> $params */
