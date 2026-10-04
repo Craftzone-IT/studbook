@@ -10,6 +10,8 @@ final class Request
      * @param array<string, mixed> $query
      * @param array<string, mixed> $post
      * @param array<string, mixed> $server
+     * @param array<string, array{tmp_name: string, name: string, size: int, error: int}> $files
+     *        uploaded files (only genuine uploads when built from globals)
      */
     public function __construct(
         public readonly string $method,
@@ -17,6 +19,7 @@ final class Request
         private readonly array $query = [],
         private readonly array $post = [],
         private readonly array $server = [],
+        private readonly array $files = [],
     ) {
     }
 
@@ -37,7 +40,48 @@ final class Request
             $_GET,
             $_POST,
             $_SERVER,
+            self::uploadedFiles($_FILES),
         );
+    }
+
+    /**
+     * An uploaded file, or null when none was sent. `error` is one of PHP's UPLOAD_ERR_* codes.
+     *
+     * @return array{tmp_name: string, name: string, size: int, error: int}|null
+     */
+    public function file(string $key): ?array
+    {
+        $file = $this->files[$key] ?? null;
+
+        return is_array($file) && $file['error'] !== UPLOAD_ERR_NO_FILE ? $file : null;
+    }
+
+    /**
+     * Single-file fields of `$_FILES`; a file that is not a genuine upload is dropped.
+     *
+     * @param array<string, mixed> $files
+     * @return array<string, array{tmp_name: string, name: string, size: int, error: int}>
+     */
+    private static function uploadedFiles(array $files): array
+    {
+        $result = [];
+        foreach ($files as $key => $file) {
+            if (!is_array($file) || !is_string($file['tmp_name'] ?? null)) {
+                continue; // multi-file fields are not used
+            }
+            $error = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
+            if ($error === UPLOAD_ERR_OK && !is_uploaded_file($file['tmp_name'])) {
+                continue;
+            }
+            $result[(string) $key] = [
+                'tmp_name' => $file['tmp_name'],
+                'name' => (string) ($file['name'] ?? ''),
+                'size' => (int) ($file['size'] ?? 0),
+                'error' => $error,
+            ];
+        }
+
+        return $result;
     }
 
     public function query(string $key, string $default = ''): string

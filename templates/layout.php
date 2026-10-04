@@ -21,6 +21,7 @@ $nav = [
     '/' => 'nav.home',
     '/build' => 'nav.build',
     '/search' => 'nav.search',
+    '/scan' => 'nav.scan',
     '/history' => 'nav.history',
     '/admin/import' => 'nav.import',
     '/settings' => 'nav.settings',
