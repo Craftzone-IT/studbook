@@ -56,7 +56,7 @@ final class ImageCacheTest extends OwnedTestCase
         self::assertSame(['https://cdn.rebrickable.com/media/parts/3001-4.jpg'], $this->requested);
     }
 
-    public function testTemporaryFailuresAreRetriedAfterAnHour(): void
+    public function testTemporaryFailuresAreRetriedAfterTenMinutes(): void
     {
         $cache = $this->cache(function (string $url): array {
             $this->requested[] = $url;
@@ -67,9 +67,10 @@ final class ImageCacheTest extends OwnedTestCase
         self::assertNull($cache->get('3001', 4));
         self::assertCount(1, $this->requested);
 
-        $this->pdo->exec("UPDATE cat_image_cache SET fetched_at = UTC_TIMESTAMP() - INTERVAL 61 MINUTE");
+        self::assertSame('error', $cache->lastMiss);
+        $this->pdo->exec("UPDATE cat_image_cache SET fetched_at = UTC_TIMESTAMP() - INTERVAL 11 MINUTE");
         $cache->get('3001', 4);
-        self::assertCount(2, $this->requested, 'retried after an hour');
+        self::assertCount(2, $this->requested, 'retried after ten minutes');
     }
 
     public function testMissingImagesAreRetriedAfterAWeek(): void
@@ -131,6 +132,21 @@ final class ImageCacheTest extends OwnedTestCase
         self::assertNull($cache->get('3024', 4));
         self::assertSame('missing', $cache->lastMiss, 'no image URL for this colour');
         array_map('fclose', $held);
+    }
+
+    public function testUnusableLockFolderDoesNotStopDownloads(): void
+    {
+        $cache = $this->cache(fn (string $url): array => $this->serve($url, 'image/jpeg'));
+        mkdir($this->dir, 0775, true);
+        file_put_contents($this->dir . '/.locks', 'a file where the lock folder should be');
+
+        $logged = ini_set('error_log', '/dev/null');
+        try {
+            self::assertNotNull($cache->get('3001', 4), 'downloaded without a limit rather than never');
+        } finally {
+            ini_set('error_log', (string) $logged);
+        }
+        self::assertNull($cache->lastMiss);
     }
 
     private function cache(callable $fetch): ImageCache
