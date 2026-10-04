@@ -34,6 +34,14 @@ final class Console
         exit($code);
     }
 
+    /** Whether a PHP function exists and is not listed in `disable_functions`. */
+    public static function canRun(string $function): bool
+    {
+        $disabled = array_map('trim', explode(',', (string) ini_get('disable_functions')));
+
+        return function_exists($function) && !in_array($function, $disabled, true);
+    }
+
     public static function prompt(string $question): string
     {
         fwrite(STDOUT, $question);
@@ -42,12 +50,20 @@ final class Console
         return $line === false ? '' : rtrim($line, "\r\n");
     }
 
-    /** Reads a line without echoing it when running on a terminal. */
+    /**
+     * Reads a line without echoing it when running on a terminal. Hosts that
+     * disable shell_exec (common on shared hosting) get a visible prompt instead.
+     */
     public static function promptHidden(string $question): string
     {
         $interactive = function_exists('posix_isatty') ? posix_isatty(STDIN) : stream_isatty(STDIN);
         if (!$interactive) {
             return self::prompt('');
+        }
+        if (!self::canRun('shell_exec')) {
+            self::err('Note: the input will be visible (shell_exec is disabled on this server).');
+
+            return self::prompt($question);
         }
         fwrite(STDOUT, $question);
         shell_exec('stty -echo');

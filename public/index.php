@@ -16,12 +16,27 @@ if (PHP_SAPI === 'cli-server') {
     }
 }
 
-$root = dirname(__DIR__);
+// Find the application folder. Two layouts are supported:
+// - standard: this file is in `<app>/public/`, the web root points there;
+// - split (e.g. HestiaCP): the app lives in `<domain>/private/`, the contents of
+//   `public/` are copied to `<domain>/public_html/`, the default web root.
+$root = null;
+foreach ([dirname(__DIR__), dirname(__DIR__) . '/private'] as $candidate) {
+    if (is_file($candidate . '/composer.json') && is_dir($candidate . '/src')) {
+        $root = $candidate;
+        break;
+    }
+}
 
-if (!is_file($root . '/vendor/autoload.php')) {
+if ($root === null || !is_file($root . '/vendor/autoload.php')) {
+    // Details go to the log only; visitors never see server paths.
+    error_log($root === null
+        ? 'Studbook: application folder not found next to ' . __DIR__ . ' (expected ../ or ../private/)'
+        : 'Studbook: ' . $root . '/vendor/autoload.php is missing; run `composer install --no-dev` there');
     http_response_code(500);
     header('Content-Type: text/plain; charset=utf-8');
-    echo "Dependencies are missing. Run `composer install --no-dev` in {$root}.\n";
+    header('X-Robots-Tag: noindex, nofollow');
+    echo "Studbook is not installed completely. The server's PHP error log has the details.\n";
     exit;
 }
 require $root . '/vendor/autoload.php';

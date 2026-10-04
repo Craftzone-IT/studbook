@@ -56,6 +56,12 @@ Record of product and technical decisions made during planning (October 2026). A
 - Backups: HestiaCP's built-in backup is sufficient (catalogue data can always be re-imported).
 - Development on GitHub; code written by Claude Code; issue → PR → review → merge. ~~Automatic deploy via GitHub Actions.~~ Superseded 2026-10-03: deployment is manual (see below).
 
+## Hosting layout (2026-10-04)
+
+- **Two supported layouts, detected by `public/index.php`:** the standard one (web root = `<app>/public/`) and the split one used by HestiaCP without changing the document root (application in `<domain>/private/`, contents of `public/` in `<domain>/public_html/`). The front controller looks for the application in `../` and `../private/`. No path is configured anywhere, so nothing instance-specific enters the code. Supersedes the earlier `v-change-web-domain-docroot` instructions.
+- **Install errors never show server paths** to visitors; the details go to the PHP error log.
+- **Commands run as the Hestia user** (`sudo -u USER -H`), never as root, so the web server can manage `vendor/`, `.env` and `storage/`. `bin/create-user` falls back to a visible password prompt when the host disables `shell_exec`.
+
 ## M2 collections and boxes (2026-10-03)
 
 - **Undo journal:** every write goes through a batch that stamps `batch_id` and journals before/after rows (`batch_change`). Revert works newest first and is refused if a later batch touched the same rows, instead of silently overwriting newer data. Collection delete and box delete are ordinary batches, so "delete with confirmation" can be undone right away from the message.
