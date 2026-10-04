@@ -47,15 +47,35 @@ final class OwnedServiceTest extends OwnedTestCase
         self::assertSame(7, (int) $this->queries->lots($box)[0]['qty'], 'moved parts merge into the target lot');
     }
 
-    public function testMovingToAnotherCollectionIsNotAllowedHere(): void
+    public function testLotsAndBoxesMoveToAnotherCollection(): void
     {
         [$a] = $this->owned->createCollection('A', false, 'Inbox');
         [$b] = $this->owned->createCollection('B', false, 'Inbox');
-        $this->owned->addLot($this->queries->inboxId($a), '3001', 4, 1);
+        $inboxA = $this->queries->inboxId($a);
+        $inboxB = $this->queries->inboxId($b);
+        $this->owned->addLot($inboxA, '3001', 4, 3);
+        $this->owned->addLot($inboxB, '3001', 4, 2);
+
+        $lot = (int) $this->queries->lots($inboxA)[0]['id'];
+        $this->owned->moveLot($lot, $inboxB, 1);
+        $moved = $this->queries->lots($inboxB)[0];
+        self::assertSame(3, (int) $moved['qty'], 'merges into the lot of the other collection');
+        self::assertSame($b, (int) $moved['collection_id']);
+
+        [$box] = $this->owned->createBox($a, 'Bricks', 'large');
+        $this->owned->addLot($box, '3024', 71, 10);
+        $this->owned->setLabels($box, ['3024']);
+        $batch = $this->owned->moveBox($box, $b);
+        self::assertSame($b, (int) $this->queries->box($box)['collection_id']);
+        self::assertSame($b, (int) $this->queries->lots($box)[0]['collection_id']);
+        self::assertSame(['3024'], $this->queries->labels($box), 'labels travel with the box');
+
+        $this->batches->revert($batch);
+        self::assertSame($a, (int) $this->queries->box($box)['collection_id']);
+        self::assertSame($a, (int) $this->queries->lots($box)[0]['collection_id']);
 
         $this->expectException(\DomainException::class);
-        $lot = (int) $this->queries->lots($this->queries->inboxId($a))[0]['id'];
-        $this->owned->moveLot($lot, $this->queries->inboxId($b), 1);
+        $this->owned->moveBox($inboxA, $b);
     }
 
     public function testDeletingABoxMovesItsContentsToTheInbox(): void

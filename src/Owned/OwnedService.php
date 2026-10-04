@@ -15,8 +15,11 @@ final class OwnedService
     public const USER_BOX_TYPES = ['large', 'small', 'jar', 'set_box'];
     public const MAX_NAME_LENGTH = 100;
 
+    private readonly LotWriter $lots;
+
     public function __construct(private readonly BatchService $batches, private readonly OwnedQueries $queries)
     {
+        $this->lots = new LotWriter($queries);
     }
 
     /** @return array{0: int, 1: int} collection id, batch id */
@@ -86,6 +89,9 @@ final class OwnedService
                 $b->delete('loose_lot', $lot);
             }
             foreach ($this->ids('SELECT id FROM owned_set WHERE collection_id = ?', $id) as $set) {
+                foreach ($this->ids('SELECT id FROM owned_set_delta WHERE owned_set_id = ?', $set) as $delta) {
+                    $b->delete('owned_set_delta', $delta);
+                }
                 $b->delete('owned_set', $set);
             }
             foreach ($this->ids('SELECT id FROM storage WHERE collection_id = ?', $id) as $box) {
@@ -154,7 +160,7 @@ final class OwnedService
 
         $work = function (Batch $b) use ($id, $inbox): void {
             foreach ($this->queries->lots($id) as $lot) {
-                $this->putLot(
+                $this->lots->put(
                     $b,
                     (int) $lot['collection_id'],
                     $inbox,
@@ -166,6 +172,10 @@ final class OwnedService
             }
             foreach ($this->ids('SELECT id FROM storage_label WHERE storage_id = ?', $id) as $label) {
                 $b->delete('storage_label', $label);
+            }
+            // Sets kept in the box stay in the collection, without a box.
+            foreach ($this->ids('SELECT id FROM owned_set WHERE storage_id = ?', $id) as $set) {
+                $b->update('owned_set', $set, ['storage_id' => null, 'updated_at' => self::now()]);
             }
             $b->delete('storage', $id);
         };
@@ -221,7 +231,7 @@ final class OwnedService
         $qty = self::quantity($qty);
 
         $work = function (Batch $b) use ($box, $part, $colorId, $qty): void {
-            $this->putLot($b, (int) $box['collection_id'], (int) $box['id'], $part, $colorId, $qty);
+            $this->lots->put($b, (int) $box['collection_id'], (int) $box['id'], $part, $colorId, $qty);
         };
 
         $params = ['qty' => $qty, 'part' => $this->queries->partDisplay($part), 'box' => $box['name']];
@@ -241,7 +251,7 @@ final class OwnedService
         $box = $this->requireBox($storageId);
         $qty = self::quantity($qty);
         $work = function (Batch $b) use ($box, $part, $colorId, $qty): void {
-            $this->putLot($b, (int) $box['collection_id'], (int) $box['id'], $part, $colorId, $qty);
+            $this->lots->put($b, (int) $box['collection_id'], (int) $box['id'], $part, $colorId, $qty);
         };
         $current = $sessionBatch !== null ? $this->entrySession($sessionBatch, (int) $box['id']) : null;
         if ($current !== null) {
@@ -281,6 +291,35 @@ final class OwnedService
         ];
     }
 
+    /** Moves a box with its labels, contents and the sets kept in it to another collection. */
+    public function moveBox(int $id, int $collectionId): int
+    {
+        $box = $this->requireBox($id);
+        $collection = $this->requireCollection($collectionId);
+        if ($box['type'] === 'inbox') {
+            throw new \DomainException('inbox_not_movable');
+        }
+        if ((int) $box['collection_id'] === $collectionId) {
+            throw new \DomainException('same_collection');
+        }
+
+        $work = function (Batch $b) use ($id, $collectionId): void {
+            $now = self::now();
+            foreach ($this->ids('SELECT id FROM loose_lot WHERE storage_id = ?', $id) as $lot) {
+                $b->update('loose_lot', $lot, ['collection_id' => $collectionId, 'updated_at' => $now]);
+            }
+            foreach ($this->ids('SELECT id FROM owned_set WHERE storage_id = ?', $id) as $set) {
+                $b->update('owned_set', $set, ['collection_id' => $collectionId, 'updated_at' => $now]);
+            }
+            $b->update('storage', $id, ['collection_id' => $collectionId, 'updated_at' => $now]);
+        };
+
+        return $this->batches->run('batch.box_moved', [
+            'name' => $box['name'],
+            'collection' => $collection['name'],
+        ], $work)[1];
+    }
+
     /** Takes parts out of a lot; the lot disappears when it reaches zero. */
     public function takeOut(int $lotId, int $qty): int
     {
@@ -288,7 +327,7 @@ final class OwnedService
         $qty = min(self::quantity($qty), (int) $lot['qty']);
 
         $work = function (Batch $b) use ($lot, $qty): void {
-            $this->reduceLot($b, $lot, $qty);
+            $this->lots->reduce($b, $lot, $qty);
         };
 
         $params = ['qty' => $qty, 'part' => $this->queries->partDisplay((string) $lot['part'])];
@@ -296,24 +335,21 @@ final class OwnedService
         return $this->batches->run('batch.parts_taken', $params, $work)[1];
     }
 
-    /** Moves (part of) a lot to another box of the same collection. */
+    /** Moves (part of) a lot to another box, also in another collection. */
     public function moveLot(int $lotId, int $targetStorageId, int $qty): int
     {
         $lot = $this->requireLot($lotId);
         $target = $this->requireBox($targetStorageId);
-        if ((int) $target['collection_id'] !== (int) $lot['collection_id']) {
-            throw new \DomainException('other_collection');
-        }
         if ((int) $target['id'] === (int) $lot['storage_id']) {
             throw new \DomainException('same_box');
         }
         $qty = min(self::quantity($qty), (int) $lot['qty']);
 
         $work = function (Batch $b) use ($lot, $target, $qty): void {
-            $this->reduceLot($b, $lot, $qty);
-            $this->putLot(
+            $this->lots->reduce($b, $lot, $qty);
+            $this->lots->put(
                 $b,
-                (int) $lot['collection_id'],
+                (int) $target['collection_id'],
                 (int) $target['id'],
                 (string) $lot['part'],
                 (int) $lot['color_id'],
@@ -328,44 +364,6 @@ final class OwnedService
         ];
 
         return $this->batches->run('batch.parts_moved', $params, $work)[1];
-    }
-
-    private function putLot(Batch $b, int $collectionId, int $storageId, string $part, int $colorId, int $qty): void
-    {
-        $existing = $this->rows(
-            'SELECT id, qty FROM loose_lot
-             WHERE storage_id = ? AND part = ? AND color_id = ? AND source_set_id IS NULL LIMIT 1',
-            $storageId,
-            $part,
-            $colorId
-        );
-        if ($existing !== []) {
-            $b->update('loose_lot', (int) $existing[0]['id'], [
-                'qty' => (int) $existing[0]['qty'] + $qty,
-                'updated_at' => self::now(),
-            ]);
-        } else {
-            $b->insert('loose_lot', [
-                'collection_id' => $collectionId,
-                'storage_id' => $storageId,
-                'part' => $part,
-                'color_id' => $colorId,
-                'qty' => $qty,
-                'updated_at' => self::now(),
-            ]);
-        }
-        $b->update('storage', $storageId, ['updated_at' => self::now()]);
-    }
-
-    /** @param array<string, mixed> $lot */
-    private function reduceLot(Batch $b, array $lot, int $qty): void
-    {
-        $left = (int) $lot['qty'] - $qty;
-        if ($left <= 0) {
-            $b->delete('loose_lot', (int) $lot['id']);
-        } else {
-            $b->update('loose_lot', (int) $lot['id'], ['qty' => $left, 'updated_at' => self::now()]);
-        }
     }
 
     /** @return array<string, mixed> */
@@ -419,6 +417,6 @@ final class OwnedService
 
     private static function now(): string
     {
-        return gmdate('Y-m-d H:i:s');
+        return LotWriter::now();
     }
 }

@@ -56,6 +56,17 @@ Record of product and technical decisions made during planning (October 2026). A
 - Backups: HestiaCP's built-in backup is sufficient (catalogue data can always be re-imported).
 - Development on GitHub; code written by Claude Code; issue → PR → review → merge. ~~Automatic deploy via GitHub Actions.~~ Superseded 2026-10-03: deployment is manual (see below).
 
+## M4 sets (2026-10-04)
+
+- **One row per physical copy.** Adding "2 × 6000" creates two `owned_set` rows in one batch, so each copy can have its own state, box and missing parts.
+- **States:** `sealed`, `built`, `disassembled` (taken apart but kept together, e.g. in its bags or box). Breaking a set up into loose parts is a separate action, not a state.
+- **Spares** are listed but not counted in the set's contents (the build does not need them). Breaking up offers to add them as loose parts (on by default, since they are physically there).
+- **Deltas** are entered as "missing" or "extra" with part, colour and quantity; changes to the same part and colour add up, a delta back at zero is deleted, and a set cannot miss more than its official quantity. Extra parts may be of any colour the part exists in.
+- **Breaking up merges into ordinary lots** (`source_set_id` stays NULL): one lot per part and colour per box keeps entry, take-out and moving simple. The origin is in the batch history, and the whole break-up can be undone.
+- **Parts go where they are labelled:** each part goes into the first box (by name) of the collection labelled for it, the rest into a chosen box (the Inbox by default).
+- **Moving across collections:** lots can now move into any box of any active collection; a whole box moves with its labels, lots and the sets kept in it; a set that moves leaves its box (boxes belong to one collection). The Inbox never moves.
+- **Set pictures** go through the same image cache as part pictures (`/img?set=…`, colour id −2 in `cat_image_cache`), from `cat_set.img_url`.
+
 ## M3 fast entry (2026-10-04)
 
 - **One entry session = one batch** per box, kept in the PHP session and continued for 30 minutes of inactivity. Undoing it removes everything entered in that session; a new addition after an undo starts a new batch. Single-step changes elsewhere stay one batch each. `/history` lists the latest 50 batches with Undo.

@@ -67,9 +67,14 @@ final class BoxController
                 $labels
             )),
             'lots' => $queries->lots((int) $box['id']),
+            'sets' => $queries->sets((int) $box['collection_id'], (int) $box['id']),
             'otherBoxes' => array_values(array_filter(
-                $queries->boxes((int) $box['collection_id']),
-                static fn (array $b): bool => (int) $b['id'] !== (int) $box['id']
+                $queries->allBoxes(),
+                static fn (array $b): bool => $b['id'] !== (int) $box['id']
+            )),
+            'collections' => array_values(array_filter(
+                $queries->activeCollections(),
+                static fn (array $c): bool => $c['id'] !== (int) $box['collection_id']
             )),
             'boxTypes' => OwnedService::USER_BOX_TYPES,
         ]));
@@ -83,6 +88,18 @@ final class BoxController
         $work = fn (): int => ($this->owned)()->updateBox($id, $request->input('name'), $request->input('type'));
 
         return $this->act($id, $work, 'box.updated');
+    }
+
+    /** @param array<string, string> $params */
+    public function moveToCollection(Request $request, array $params): Response
+    {
+        $id = (int) $params['id'];
+
+        return $this->act(
+            $id,
+            fn (): int => ($this->owned)()->moveBox($id, (int) $request->input('collection')),
+            'box.moved'
+        );
     }
 
     /** @param array<string, string> $params */

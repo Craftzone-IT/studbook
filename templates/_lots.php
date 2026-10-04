@@ -8,13 +8,21 @@ use Studbook\Http\Csrf;
  * Lot list of a box; used on the box page and refreshed by the entry page.
  *
  * @var list<array<string, mixed>> $lots
- * @var list<array<string, mixed>> $otherBoxes boxes to move to (none = no move form)
+ * @var list<array{id: int, name: string, collection_name: string}> $otherBoxes boxes to move to (none = no move form)
  * @var bool|null $compact true hides the take out / move actions
  * @var \Studbook\I18n\Formatter $fmt
  */
 $compact ??= false;
 $csrf = '<input type="hidden" name="' . e(Csrf::FIELD) . '" value="' . e(Csrf::token()) . '">';
 $img = static fn (string $part, int $color): string => url('/img') . '?part=' . rawurlencode($part) . '&color=' . $color;
+// Move targets grouped by collection (the current collection first, as the box page lists it).
+$moveGroups = [];
+foreach ($otherBoxes as $other) {
+    $moveGroups[(string) $other['collection_name']][] = $other;
+}
+if (isset($box['collection_name'], $moveGroups[$box['collection_name']])) {
+    $moveGroups = [$box['collection_name'] => $moveGroups[$box['collection_name']]] + $moveGroups;
+}
 ?>
 <?php if ($lots === []) : ?>
     <p><?= e(t('box.empty')) ?></p>
@@ -46,8 +54,12 @@ $img = static fn (string $part, int $color): string => url('/img') . '?part=' . 
                             <input id="move-qty-<?= e($lot['id']) ?>" name="qty" type="number" min="1" max="<?= e($lot['qty']) ?>" value="<?= e($lot['qty']) ?>" inputmode="numeric">
                             <label for="move-to-<?= e($lot['id']) ?>" class="visually-hidden"><?= e(t('box.move_to')) ?></label>
                             <select id="move-to-<?= e($lot['id']) ?>" name="target">
-                                <?php foreach ($otherBoxes as $other) : ?>
-                                    <option value="<?= e($other['id']) ?>"><?= e($other['name']) ?></option>
+                                <?php foreach ($moveGroups as $group => $groupBoxes) : ?>
+                                    <optgroup label="<?= e($group) ?>">
+                                        <?php foreach ($groupBoxes as $other) : ?>
+                                            <option value="<?= e($other['id']) ?>"><?= e($other['name']) ?></option>
+                                        <?php endforeach; ?>
+                                    </optgroup>
                                 <?php endforeach; ?>
                             </select>
                             <button type="submit" class="button"><?= e(t('box.move_submit')) ?></button>

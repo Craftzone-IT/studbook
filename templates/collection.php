@@ -7,6 +7,7 @@ use Studbook\Http\Csrf;
 /**
  * @var array<string, mixed> $collection
  * @var list<array<string, mixed>> $boxes
+ * @var list<array<string, mixed>> $sets
  * @var bool $empty
  * @var list<string> $boxTypes
  * @var \Studbook\I18n\Formatter $fmt
@@ -60,6 +61,18 @@ $id = (int) $collection['id'];
             <?php endforeach; ?>
         </select>
         <button type="submit" class="button button-primary"><?= e(t('box.create')) ?></button>
+    </form>
+</section>
+
+<section class="card setup-step">
+    <h2><?= e(t('collection.sets')) ?></h2>
+    <?php $showBox = true; require __DIR__ . '/_sets.php'; ?>
+    <h3><?= e(t('set.add')) ?></h3>
+    <form method="get" action="<?= e(url('/c/' . $id . '/sets/new')) ?>" class="form form-inline" role="search">
+        <label for="set-q" class="visually-hidden"><?= e(t('set.number')) ?></label>
+        <input id="set-q" name="q" type="search" required autocomplete="off" autocapitalize="none" spellcheck="false"
+               placeholder="<?= e(t('set.number_placeholder')) ?>">
+        <button type="submit" class="button button-primary"><?= e(t('box.next')) ?></button>
     </form>
 </section>
 

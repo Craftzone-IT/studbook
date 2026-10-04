@@ -9,7 +9,9 @@ use Studbook\Http\Csrf;
  * @var list<array{rb_num: string, bl_num: ?string, name: string, display: string}> $labels
  * @var string $labelText
  * @var list<array<string, mixed>> $lots
- * @var list<array<string, mixed>> $otherBoxes
+ * @var list<array<string, mixed>> $sets sets kept in this box
+ * @var list<array{id: int, name: string, collection_name: string}> $otherBoxes
+ * @var list<array{id: int, name: string}> $collections other collections
  * @var list<string> $boxTypes
  * @var \Studbook\I18n\Formatter $fmt
  */
@@ -60,6 +62,13 @@ $img = static fn (string $part, int $color): string => url('/img') . '?part=' . 
     <?php require __DIR__ . '/_lots.php'; ?>
 </section>
 
+<?php if ($sets !== []) : ?>
+    <section class="card setup-step">
+        <h2><?= e(t('box.sets')) ?></h2>
+        <?php require __DIR__ . '/_sets.php'; ?>
+    </section>
+<?php endif; ?>
+
 <section class="card setup-step">
     <h2><?= e(t('box.labels_heading')) ?></h2>
     <p class="hint"><?= e(t('box.labels_hint')) ?></p>
@@ -87,6 +96,20 @@ $img = static fn (string $part, int $color): string => url('/img') . '?part=' . 
         <?php endif; ?>
         <button type="submit" class="button button-primary"><?= e(t('settings.save')) ?></button>
     </form>
+    <?php if ($box['type'] !== 'inbox' && $collections !== []) : ?>
+        <h3><?= e(t('box.move_heading')) ?></h3>
+        <form method="post" action="<?= e(url('/b/' . $id . '/move')) ?>" class="form form-inline">
+            <?= $csrf ?>
+            <label for="box-move" class="visually-hidden"><?= e(t('box.move_heading')) ?></label>
+            <select id="box-move" name="collection">
+                <?php foreach ($collections as $other) : ?>
+                    <option value="<?= e($other['id']) ?>"><?= e($other['name']) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <button type="submit" class="button"><?= e(t('box.move_submit_collection')) ?></button>
+        </form>
+        <p class="hint"><?= e(t('box.move_hint')) ?></p>
+    <?php endif; ?>
     <?php if ($box['type'] !== 'inbox') : ?>
         <h3><?= e(t('box.delete_heading')) ?></h3>
         <form method="post" action="<?= e(url('/b/' . $id . '/delete')) ?>">
