@@ -56,6 +56,13 @@ Record of product and technical decisions made during planning (October 2026). A
 - Backups: HestiaCP's built-in backup is sufficient (catalogue data can always be re-imported).
 - Development on GitHub; code written by Claude Code; issue → PR → review → merge. ~~Automatic deploy via GitHub Actions.~~ Superseded 2026-10-03: deployment is manual (see below).
 
+## Rebrickable API for BrickLink ids (2026-10-04)
+
+- **Why:** the first real import on the maintainer's host matched only 147 of 275 colours and 11,844 of 64,769 parts by number. Of the 61,469 parts that occur in set inventories, 50,203 had no BrickLink number: about 43,500 printed parts (numbered differently on both sites) and 6,644 mould variants (`3040b`↔`3040`, `3001a`↔`3001old`). Guessing these would show wrong numbers, which breaks the rule that the UI always shows BrickLink numbers.
+- **Decision:** when `REBRICKABLE_API_KEY` is set, the importer reads the official BrickLink ids from the Rebrickable API (`lego/parts/?inc_part_details=1`, `lego/colors/`). It is an official, key-based API, not scraping (hard rule 6); requests are spaced one second apart, 429 responses are honoured, and the result is cached and refreshed at most once per day, like the CSV downloads. The key is the user's own and lives only in `.env`.
+- **Fallbacks:** without a key, or when the API fails, matching uses the BrickLink files (and an older cached API result if one exists). The BrickLink files stay useful for BrickLink names and categories.
+- Unmatched colours after name matching were almost all special ranges (HO, Modulex, Duplo, Clikits, Fabuland, glitter variants).
+
 ## Hosting layout (2026-10-04)
 
 - **Two supported layouts, detected by `public/index.php`:** the standard one (web root = `<app>/public/`) and the split one used by HestiaCP without changing the document root (application in `<domain>/private/`, contents of `public/` in `<domain>/public_html/`). The front controller looks for the application in `../` and `../private/`. No path is configured anywhere, so nothing instance-specific enters the code. Supersedes the earlier `v-change-web-domain-docroot` instructions.
@@ -74,6 +81,7 @@ Record of product and technical decisions made during planning (October 2026). A
 
 ## M1 catalogue import (2026-10-03)
 
+- ~~Rebrickable's API is not used for now.~~ Superseded 2026-10-04, see "Rebrickable API for BrickLink ids" below.
 - **No BrickLink IDs in Rebrickable's CSVs.** The downloads carry no external IDs, so BL numbers are matched locally: colours by normalised name (Rebrickable uses BrickLink's names almost everywhere), parts by identical number and then BrickLink's alternate item numbers. Ambiguous matches are not guessed. Prints usually stay unmatched; showing the BL number of the unprinted parent is left for later. Rebrickable's API would give exact external IDs but needs a per-user key; not used for now.
 - **Inventories:** default inventory = lowest version. Minifig parts are flattened into the set with `from_minifig = 1`; sub-sets of multi-packs are flattened one level deep.
 - **Heights are stored in plates** (`height_plates`), so bricks, plates and fractional bricks (2/3, 1 1/3) are whole numbers.

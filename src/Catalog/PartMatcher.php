@@ -12,6 +12,8 @@ namespace Studbook\Catalog;
  */
 final class PartMatcher
 {
+    /** Set by the importer when the Rebrickable API supplied the BrickLink id. */
+    public const API = 'api';
     public const EXACT = 'exact';
     public const ALTERNATE = 'alternate';
 

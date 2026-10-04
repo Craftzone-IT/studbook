@@ -103,6 +103,8 @@ return [
     'import.match.colors' => 'Párosított színek',
     'import.match.ratio' => '{matched} / {total}',
     'import.match.parts_exact' => 'Azonos számú alkatrészek',
+    'import.match.parts_api' => 'BrickLink-azonosító a Rebrickable API-ból',
+    'import.api_hint' => 'A pontos BrickLink-számokhoz (a nyomott mintás elemekhez is) írd be a .env fájlba a saját, ingyenes Rebrickable API-kulcsodat (REBRICKABLE_API_KEY), majd futtasd újra az importot.',
     'import.match.parts_alternate' => 'BrickLink alternatív számon párosítva',
     'import.match.parts_unmatched' => 'BrickLink-szám nélküli alkatrészek',
     'import.match.hint' => 'A nyomott mintás elemek és matricák számozása gyakran eltér, ezért párosítatlanok maradnak; ez várható.',

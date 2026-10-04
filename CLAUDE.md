@@ -10,14 +10,14 @@ Background, decisions and their reasons: `docs/decisions.md`. Data model: `docs/
 
 ## Current status
 
-- **Phase:** M0, M1 and M2 code merged. First install on the maintainer's HestiaCP host is in progress (#1); catalogue import with real BrickLink files pending (#2).
-- **Done:** M0 code (#8, #10), browser setup wizard (#9), M1 catalogue importer code (#12), M2 collections and boxes (#13).
-- **In progress:** Hestia folder layout support (app in `private/`, web root `public_html/`), found during the first install.
-- **Next:** finish the first install (closes #1); real BrickLink files to check matching (#2); then M3 – Fast entry (#4), which adds the batch list and keyboard entry.
+- **Phase:** M0 installed and closed (#1). M1 runs on the host; BrickLink matching is being improved before #2 can close. M2 merged (#13), to be tried on the host.
+- **Done:** M0 (#8, #10, #14 Hestia layout), browser setup wizard (#9), M1 importer (#12), M2 collections and boxes (#13).
+- **In progress:** Rebrickable API for official BrickLink ids (`REBRICKABLE_API_KEY`). First real import matched only 147/275 colours and 11,844/64,769 parts by number (prints and mould variants differ); see `docs/decisions.md`.
+- **Next:** maintainer sets the API key and re-runs the import; check the match report (closes #2); cron and "Run import now" on the host; try M2 on the host; then M3 – Fast entry (#4).
 - **Open questions:**
   - PHP on the maintainer's host is 8.3 (`/usr/bin/php8.3`); `proc_open` is disabled there (Composer warns, works).
-  - BrickLink catalogue download format: the reader accepts tab-delimited and XML and recognises files by columns (`Number`/`Name`, `Color ID`/`Color Name`), but has not seen a real file yet. Check with the maintainer's download and adjust `src/Catalog/BrickLinkCatalog.php` if needed.
-  - How many non-print parts stay unmatched with real BrickLink data; whether a mould/print fallback via `cat_part_rel` is worth it.
+  - Rebrickable API response format is implemented from the documentation and tested with fixtures only (`rebrickable.com` is not reachable from the cloud dev environment); confirm with the first real run on the host.
+  - BrickLink download format is confirmed (tab-delimited Parts with `Alternate Item Number`, Colors); "Include Year" must stay unticked.
   - Server-side OCR engine (Tesseract first; test on handwritten part numbers in M6).
   - Brickognize response format: which ID system, whether colour is returned (test call in M6).
 

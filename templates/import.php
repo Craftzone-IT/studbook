@@ -63,7 +63,11 @@ $stats = $report['stats'] ?? [];
         </table>
 
         <h3><?= e(t('import.bricklink')) ?></h3>
-        <?php if (($stats['bricklink']['parts'] ?? 0) === 0 || ($stats['bricklink']['colors'] ?? 0) === 0) : ?>
+        <?php $apiUsed = ($stats['api']['parts'] ?? 0) > 0; ?>
+        <?php if (!$apiUsed) : ?>
+            <p class="flash flash-info"><?= e(t('import.api_hint')) ?></p>
+        <?php endif; ?>
+        <?php if (!$apiUsed && (($stats['bricklink']['parts'] ?? 0) === 0 || ($stats['bricklink']['colors'] ?? 0) === 0)) : ?>
             <p class="flash flash-error"><?= e(t('import.bricklink_missing')) ?></p>
         <?php endif; ?>
         <table class="data-table">
@@ -75,6 +79,12 @@ $stats = $report['stats'] ?? [];
                     'total' => $fmt->number((int) ($stats['colors']['total'] ?? 0)),
                 ])) ?></td>
             </tr>
+            <?php if ($apiUsed) : ?>
+                <tr>
+                    <th scope="row"><?= e(t('import.match.parts_api')) ?></th>
+                    <td class="num"><?= e($fmt->number((int) ($stats['parts']['matched_api'] ?? 0))) ?></td>
+                </tr>
+            <?php endif; ?>
             <tr>
                 <th scope="row"><?= e(t('import.match.parts_exact')) ?></th>
                 <td class="num"><?= e($fmt->number((int) ($stats['parts']['matched_exact'] ?? 0))) ?></td>
@@ -91,13 +101,13 @@ $stats = $report['stats'] ?? [];
         </table>
         <p class="hint"><?= e(t('import.match.hint')) ?></p>
 
-        <?php if (($stats['colors']['unmatched'] ?? []) !== [] && ($stats['bricklink']['colors'] ?? 0) > 0) : ?>
+        <?php if (($stats['colors']['unmatched'] ?? []) !== [] && ($apiUsed || ($stats['bricklink']['colors'] ?? 0) > 0)) : ?>
             <details>
                 <summary><?= e(t('import.unmatched_colors', ['count' => count($stats['colors']['unmatched'])])) ?></summary>
                 <p><?= e(implode(', ', $stats['colors']['unmatched'])) ?></p>
             </details>
         <?php endif; ?>
-        <?php if (($stats['parts']['unmatched_samples'] ?? []) !== [] && ($stats['bricklink']['parts'] ?? 0) > 0) : ?>
+        <?php if (($stats['parts']['unmatched_samples'] ?? []) !== [] && ($apiUsed || ($stats['bricklink']['parts'] ?? 0) > 0)) : ?>
             <details>
                 <summary><?= e(t('import.unmatched_parts')) ?></summary>
                 <ul class="file-list">

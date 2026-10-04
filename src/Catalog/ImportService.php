@@ -58,6 +58,31 @@ final class ImportService
         return $this->execute($this->runs->queue($trigger), $output);
     }
 
+    /**
+     * Official BrickLink ids from the Rebrickable API, when REBRICKABLE_API_KEY is set.
+     *
+     * @param callable(string): void $log
+     * @return array{0: array<string, list<string>>, 1: array<string, array{ids: list<int>, names: list<string>}>}
+     */
+    private function apiIds(callable $log): array
+    {
+        $key = trim($this->config->get('REBRICKABLE_API_KEY'));
+        if ($key === '') {
+            $log('Rebrickable API key not set; BrickLink ids come from the BrickLink files only.');
+
+            return [[], []];
+        }
+        $api = new RebrickableApi(
+            $key,
+            $this->config->get('REBRICKABLE_API_BASE', 'https://rebrickable.com/api/v3/'),
+            $this->config->path('CATALOG_DOWNLOAD_PATH', 'storage/catalog/rebrickable'),
+            $this->config->int('IMPORT_MIN_INTERVAL_HOURS', 24),
+            'Studbook (+' . $this->config->get('APP_SOURCE_URL', self::SOURCE_URL) . ')'
+        );
+
+        return [$api->partIds($log), $api->colorIds($log)];
+    }
+
     /** @param callable(string): void $output */
     private function execute(int $runId, callable $output): string
     {
@@ -85,10 +110,11 @@ final class ImportService
                     'Studbook (+' . $this->config->get('APP_SOURCE_URL', self::SOURCE_URL) . ')'
                 );
                 $files = $downloader->fetchAll($log);
+                [$apiParts, $apiColors] = $this->apiIds($log);
                 $bricklink = BrickLinkCatalog::load(
                     $this->config->path('BRICKLINK_FILES_PATH', 'storage/catalog/bricklink')
                 );
-                $stats = (new CatalogImporter($this->pdo, $log))->import($files, $bricklink);
+                $stats = (new CatalogImporter($this->pdo, $log))->import($files, $bricklink, $apiParts, $apiColors);
                 $stats['duration_seconds'] = (int) round(microtime(true) - $started);
                 $log(sprintf('Import finished in %d s.', $stats['duration_seconds']));
                 $this->runs->finish($runId, ImportRunRepository::SUCCESS, implode("\n", $lines), $stats);

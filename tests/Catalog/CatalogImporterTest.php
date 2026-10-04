@@ -34,7 +34,10 @@ final class CatalogImporterTest extends DatabaseTestCase
 
         self::assertSame(6, $stats['counts']['cat_part']);
         self::assertSame(3, $stats['counts']['cat_set']);
-        self::assertSame(['total' => 7, 'matched' => 5, 'unmatched' => ['Imaginary Sparkle']], $stats['colors']);
+        self::assertSame(
+            ['total' => 7, 'matched' => 5, 'matched_api' => 0, 'unmatched' => ['Imaginary Sparkle']],
+            $stats['colors']
+        );
         self::assertSame(2, $stats['parts']['matched_exact']);
         self::assertSame(1, $stats['parts']['matched_alternate']);
         self::assertSame(3, $stats['parts']['unmatched']);
@@ -107,6 +110,34 @@ final class CatalogImporterTest extends DatabaseTestCase
         )));
     }
 
+    public function testRebrickableApiIdsComeFirst(): void
+    {
+        $stats = $this->import(null, [
+            '3001pr0001' => ['3001pb001'],
+            '3001' => ['3001'],
+        ], [
+            '1000' => ['ids' => [999], 'names' => ['Imaginary Sparkle']],
+            '4' => ['ids' => [5], 'names' => ['Red']],
+        ]);
+
+        self::assertSame(2, $stats['parts']['matched_api']);
+        self::assertSame(1, $stats['parts']['matched_exact'], '3024 still matches the BrickLink file');
+        self::assertSame(1, $stats['parts']['matched_alternate']);
+        $print = $this->row("SELECT bl_num, bl_match FROM cat_part WHERE rb_num = '3001pr0001'");
+        self::assertSame(['bl_num' => '3001pb001', 'bl_match' => 'api'], $print);
+        self::assertSame(2, $stats['colors']['matched_api']);
+        self::assertSame([], $stats['colors']['unmatched']);
+        self::assertSame(
+            ['bl_id' => 999, 'bl_name' => 'Imaginary Sparkle'],
+            array_map(
+                fn ($v) => is_numeric($v) ? (int) $v : $v,
+                $this->row('SELECT bl_id, bl_name FROM cat_color WHERE rb_id = 1000')
+            )
+        );
+        $red = $this->row('SELECT bl_name FROM cat_color WHERE rb_id = 4');
+        self::assertSame('Red', $red['bl_name'], 'the name from the BrickLink file wins');
+    }
+
     public function testWorksWithoutBrickLinkFiles(): void
     {
         $stats = $this->import('/nonexistent');
@@ -132,14 +163,17 @@ final class CatalogImporterTest extends DatabaseTestCase
         self::assertSame([], $this->pdo->query("SHOW TABLES LIKE '%\\_new'")->fetchAll());
     }
 
-    /** @return array<string, mixed> */
-    private function import(?string $bricklinkDir = null): array
+    /**
+     * @param array<string, list<string>> $apiParts
+     * @param array<string, array{ids: list<int>, names: list<string>}> $apiColors
+     * @return array<string, mixed>
+     */
+    private function import(?string $bricklinkDir = null, array $apiParts = [], array $apiColors = []): array
     {
         $bricklink = BrickLinkCatalog::load($bricklinkDir ?? dirname(__DIR__) . '/fixtures/bricklink');
-
         $importer = new CatalogImporter($this->pdo, static fn () => null);
 
-        return $importer->import(CatalogFixtures::files($this->dir), $bricklink);
+        return $importer->import(CatalogFixtures::files($this->dir), $bricklink, $apiParts, $apiColors);
     }
 
     /** @return array<string, mixed> */

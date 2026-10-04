@@ -12,10 +12,11 @@ Create a dedicated environment (e.g. `studbook`) at claude.ai/code → environme
 
 ```
 cdn.rebrickable.com
+rebrickable.com
 api.brickognize.com
 ```
 
-These two are only needed for manual end-to-end checks of the importer and photo recognition. Automated tests must not depend on them (use fixtures in `tests/fixtures/`).
+These are only needed for manual end-to-end checks of the importer and photo recognition. Automated tests must not depend on them (use fixtures in `tests/fixtures/`).
 
 **Environment variables:** none required. Do not put secrets here — anyone using the environment can read them. The app reads a local `.env` that the SessionStart hook creates from `.env.example` with dev values.
 

@@ -103,6 +103,8 @@ return [
     'import.match.colors' => 'Colours matched',
     'import.match.ratio' => '{matched} of {total}',
     'import.match.parts_exact' => 'Parts with the same number',
+    'import.match.parts_api' => 'Parts with the BrickLink id from the Rebrickable API',
+    'import.api_hint' => 'For exact BrickLink numbers (including printed parts), set REBRICKABLE_API_KEY in .env to your own free Rebrickable API key and run the import again.',
     'import.match.parts_alternate' => 'Parts matched via BrickLink alternate number',
     'import.match.parts_unmatched' => 'Parts without BrickLink number',
     'import.match.hint' => 'Printed parts and stickers are often numbered differently and stay unmatched; this is expected.',
