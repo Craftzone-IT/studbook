@@ -10,13 +10,12 @@ Background, decisions and their reasons: `docs/decisions.md`. Data model: `docs/
 
 ## Current status
 
-- **Phase:** M0 and M1 code merged; both wait for verification on the host (#1, #2). M2 in progress. Issues exist for every milestone (#1 M0 … #7 M6) plus #9 (setup wizard, done).
-- **Done:** M0 code (#8, #10), browser setup wizard (#9), M1 catalogue importer code (#12).
-- **In progress:** M2 – Collections and boxes (#3): collection cards and CRUD (archive, delete as revertible batch), boxes with Inbox, box labels, box page `/b/{id}` with add/take out/move, QR label sheet, image cache, undo journal (`batch` / `batch_change`) with an Undo button in messages.
-- **Next:** first install on the HestiaCP host (closes #1); real BrickLink files to check matching (#2); then M3 – Fast entry (#4), which adds the batch list and keyboard entry.
+- **Phase:** M0, M1 and M2 code merged. First install on the maintainer's HestiaCP host is in progress (#1); catalogue import with real BrickLink files pending (#2).
+- **Done:** M0 code (#8, #10), browser setup wizard (#9), M1 catalogue importer code (#12), M2 collections and boxes (#13).
+- **In progress:** Hestia folder layout support (app in `private/`, web root `public_html/`), found during the first install.
+- **Next:** finish the first install (closes #1); real BrickLink files to check matching (#2); then M3 – Fast entry (#4), which adds the batch list and keyboard entry.
 - **Open questions:**
-  - PHP version on the maintainer's HestiaCP host (code targets 8.2+; CI tests 8.2 and 8.3).
-  - Hestia custom document root for `public/` — confirm the `v-change-web-domain-docroot` approach in `docs/deploy-hestia.md` on the real host.
+  - PHP on the maintainer's host is 8.3 (`/usr/bin/php8.3`); `proc_open` is disabled there (Composer warns, works).
   - BrickLink catalogue download format: the reader accepts tab-delimited and XML and recognises files by columns (`Number`/`Name`, `Color ID`/`Color Name`), but has not seen a real file yet. Check with the maintainer's download and adjust `src/Catalog/BrickLinkCatalog.php` if needed.
   - How many non-print parts stay unmatched with real BrickLink data; whether a mould/print fallback via `cat_part_rel` is worth it.
   - Server-side OCR engine (Tesseract first; test on handwritten part numbers in M6).
@@ -64,6 +63,6 @@ Checks before every push: `composer lint`, `php bin/check-translations`, `compos
 
 - One issue → one branch → one PR. Keep PRs focused on a single milestone item.
 - PR description: what and why, how it was tested, screenshots for UI changes (desktop + mobile).
-- `main` is always deployable. Deployment is manual: the maintainer uploads from a local clone (Windows) over FTP, then runs `composer install --no-dev` and `php bin/migrate` on the server over SSH (`docs/deploy-hestia.md`). There is no automatic deploy.
+- `main` is always deployable. Deployment is manual: the maintainer uploads from a local clone (Windows) over FTP into Hestia's `private/` (application) and `public_html/` (contents of `public/`), then runs `composer install --no-dev` over SSH as the Hestia user; database updates are applied on the `/setup` page or with `bin/migrate` (`docs/deploy-hestia.md`). There is no automatic deploy.
 - Domain terms: **collection** (independent inventory), **storage/box** (physical container, always belongs to one collection), **owned set** (set kept as a unit: reference inventory + deltas), **loose lot** (part+colour+quantity in a box), **build** (target set being assembled), **allocation** (parts reserved for a build), **batch** (undo unit).
 - Internal keys are Rebrickable IDs; the UI always shows BrickLink item numbers and colours.

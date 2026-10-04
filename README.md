@@ -63,7 +63,7 @@ Part data provided by [Rebrickable](https://rebrickable.com). Part recognition (
 
 2. Create an empty MySQL/MariaDB database (`utf8mb4`) and a user for it.
 3. Copy `.env.example` to `.env` and fill it in. Every key is documented there; the app refuses to start when a required key is missing. For the first installation also set `SETUP_TOKEN` to a random value of at least 16 characters.
-4. Point the web server's document root to `public/` (all other folders must not be web-accessible). Requests that are not existing files go to `public/index.php`; `public/.htaccess` does this for Apache, nginx needs `try_files $uri /index.php?$query_string;`.
+4. Make `public/` the web root; all other folders must not be web-accessible. Either point the web server's document root to `public/`, or (shared hosting such as HestiaCP) put the application in a `private/` folder and copy the contents of `public/` into the web root next to it (`public_html/`); `index.php` finds the application in `../` or `../private/`. Requests that are not existing files go to `index.php`; `.htaccess` does this for Apache, nginx needs `try_files $uri /index.php?$query_string;`.
 5. Open `https://your-domain/setup`, enter the setup token, and follow the three steps: server check, database tables, your login. Afterwards remove `SETUP_TOKEN` from `.env`.
 6. Choose the language under **Settings**.
 
