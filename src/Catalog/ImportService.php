@@ -44,18 +44,23 @@ final class ImportService
         if ($last !== null && $last > new \DateTimeImmutable("-{$days} days", new \DateTimeZone('UTC'))) {
             return null;
         }
+        // Another import (e.g. started by hand) is running: do not leave a scheduled run behind in the queue.
+        if ((int) $this->pdo->query("SELECT IS_FREE_LOCK('" . self::LOCK . "')")->fetchColumn() !== 1) {
+            return null;
+        }
 
         return $this->execute($this->runs->queue('cron'), $output);
     }
 
     /**
-     * Runs an import right away (CLI).
+     * Runs an import right away (CLI). A run already queued from the admin
+     * page is taken over and recorded as started by `$trigger`.
      *
      * @param callable(string): void $output
      */
     public function runNow(string $trigger, callable $output): string
     {
-        return $this->execute($this->runs->queue($trigger), $output);
+        return $this->execute($this->runs->queue($trigger), $output, $trigger);
     }
 
     /**
@@ -84,7 +89,7 @@ final class ImportService
     }
 
     /** @param callable(string): void $output */
-    private function execute(int $runId, callable $output): string
+    private function execute(int $runId, callable $output, ?string $startedBy = null): string
     {
         if ((int) $this->pdo->query("SELECT GET_LOCK('" . self::LOCK . "', 0)")->fetchColumn() !== 1) {
             $output('Another import is running; nothing to do.');
@@ -99,7 +104,7 @@ final class ImportService
         };
         try {
             $this->runs->failAbandoned();
-            $this->runs->start($runId);
+            $this->runs->start($runId, $startedBy);
             $started = microtime(true);
             $log('Import started.');
             try {

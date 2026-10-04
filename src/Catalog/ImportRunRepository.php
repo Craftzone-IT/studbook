@@ -43,11 +43,19 @@ final class ImportRunRepository
         return $id === false ? null : (int) $id;
     }
 
-    public function start(int $id): void
+    /** Marks a run as running; `$startedBy` replaces the trigger when someone else takes over a queued run. */
+    public function start(int $id, ?string $startedBy = null): void
     {
+        if ($startedBy === null) {
+            $this->pdo->prepare(
+                'UPDATE import_run SET status = ?, started_at = UTC_TIMESTAMP() WHERE id = ?'
+            )->execute([self::RUNNING, $id]);
+
+            return;
+        }
         $this->pdo->prepare(
-            'UPDATE import_run SET status = ?, started_at = UTC_TIMESTAMP() WHERE id = ?'
-        )->execute([self::RUNNING, $id]);
+            'UPDATE import_run SET status = ?, started_at = UTC_TIMESTAMP(), trigger_type = ? WHERE id = ?'
+        )->execute([self::RUNNING, $startedBy, $id]);
     }
 
     /** @param array<string, mixed> $stats */

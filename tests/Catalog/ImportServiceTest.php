@@ -7,6 +7,7 @@ namespace Studbook\Tests\Catalog;
 use Studbook\Catalog\ImportRunRepository;
 use Studbook\Catalog\ImportService;
 use Studbook\Config;
+use Studbook\Database\Connection;
 use Studbook\SettingRepository;
 use Studbook\Tests\DatabaseTestCase;
 
@@ -98,6 +99,34 @@ final class ImportServiceTest extends DatabaseTestCase
         $run = $this->runs->latest(1)[0];
         self::assertStringContainsString('WARNING Rebrickable API api_parts failed', (string) $run['log']);
         self::assertSame(2, $run['stats']['parts']['matched_exact']);
+    }
+
+    public function testCommandLineRunTakingOverAQueuedRunIsRecordedAsCommandLine(): void
+    {
+        $id = $this->runs->queue('manual');
+
+        $this->service->runNow('cli', static fn () => null);
+
+        $run = $this->runs->latest(1)[0];
+        self::assertSame($id, (int) $run['id']);
+        self::assertSame('cli', $run['trigger_type']);
+    }
+
+    public function testCronLeavesNothingQueuedWhileAnotherImportRuns(): void
+    {
+        $other = Connection::create(
+            (string) getenv('STUDBOOK_TEST_DB_DSN'),
+            (string) getenv('STUDBOOK_TEST_DB_USER'),
+            (string) getenv('STUDBOOK_TEST_DB_PASSWORD')
+        );
+        $other->query("SELECT GET_LOCK('" . ImportService::LOCK . "', 0)");
+        try {
+            self::assertNull($this->service->cron(static fn () => null));
+        } finally {
+            $other->query("SELECT RELEASE_LOCK('" . ImportService::LOCK . "')");
+        }
+
+        self::assertSame([], $this->runs->latest());
     }
 
     public function testFailedRunIsRecorded(): void
