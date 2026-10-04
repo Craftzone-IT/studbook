@@ -190,7 +190,7 @@ return [
     'box.move_to' => 'Cél doboz',
     'box.move_submit' => 'Áthelyez',
     'box.labels_heading' => 'Cikkszámok a dobozon',
-    'box.labels_hint' => 'A doboz tetejére írt cikkszámok szóközzel vagy új sorral elválasztva (BrickLink- vagy Rebrickable-számok). Fent gyorsválasztó csempeként és a nyomtatott címkén jelennek meg.',
+    'box.labels_hint' => 'A doboz tetejére írt cikkszámok szóközzel vagy új sorral elválasztva (BrickLink- vagy Rebrickable-számok). Fent gyorsválasztó csempeként és a nyomtatott címkén jelennek meg. A dobozba tett elemek cikkszáma magától is bekerül (a Beérkező doboz kivételével).',
     'box.labels_save' => 'Cikkszámok mentése',
     'box.labels_saved' => 'A cikkszámok elmentve.',
     'box.labels_unknown' => 'Nem található a katalógusban: {parts}. Semmi sem lett mentve; javítsd a számokat, és mentsd újra.',

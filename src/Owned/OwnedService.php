@@ -232,6 +232,7 @@ final class OwnedService
 
         $work = function (Batch $b) use ($box, $part, $colorId, $qty): void {
             $this->lots->put($b, (int) $box['collection_id'], (int) $box['id'], $part, $colorId, $qty);
+            $this->labelPart($b, $box, $part);
         };
 
         $params = ['qty' => $qty, 'part' => $this->queries->partDisplay($part), 'box' => $box['name']];
@@ -252,6 +253,7 @@ final class OwnedService
         $qty = self::quantity($qty);
         $work = function (Batch $b) use ($box, $part, $colorId, $qty): void {
             $this->lots->put($b, (int) $box['collection_id'], (int) $box['id'], $part, $colorId, $qty);
+            $this->labelPart($b, $box, $part);
         };
         $current = $sessionBatch !== null ? $this->entrySession($sessionBatch, (int) $box['id']) : null;
         if ($current !== null) {
@@ -355,6 +357,7 @@ final class OwnedService
                 (int) $lot['color_id'],
                 $qty
             );
+            $this->labelPart($b, $target, (string) $lot['part']);
         };
 
         $params = [
@@ -364,6 +367,52 @@ final class OwnedService
         ];
 
         return $this->batches->run('batch.parts_moved', $params, $work)[1];
+    }
+
+    /**
+     * Writes the part number on the box when parts are put into it, unless it is already
+     * there (also as another Rebrickable part with the same BrickLink number). The Inbox is
+     * a temporary place and gets no part numbers; nor does a box that has MAX_LABELS already.
+     *
+     * @param array<string, mixed> $box
+     */
+    private function labelPart(Batch $b, array $box, string $part): void
+    {
+        if ($box['type'] === 'inbox') {
+            return;
+        }
+        $storageId = (int) $box['id'];
+        $existing = $this->rows(
+            'SELECT sl.part FROM storage_label sl
+             LEFT JOIN cat_part lp ON lp.rb_num = sl.part
+             LEFT JOIN cat_part np ON np.rb_num = ?
+             WHERE sl.storage_id = ? AND (sl.part = ? OR (np.bl_num IS NOT NULL AND lp.bl_num = np.bl_num))
+             LIMIT 1',
+            $part,
+            $storageId,
+            $part
+        );
+        if ($existing !== []) {
+            return;
+        }
+        $count = $this->rows(
+            'SELECT COUNT(*) AS n, COALESCE(MAX(position), -1) AS last FROM storage_label WHERE storage_id = ?',
+            $storageId
+        )[0];
+        if ((int) $count['n'] >= LabelParser::MAX_LABELS) {
+            return;
+        }
+        // The usual part for its BrickLink number (3003 rather than the transparent 6223).
+        $usual = $this->rows(
+            'SELECT p.rb_num FROM cat_part p JOIN cat_part np ON np.rb_num = ? AND np.bl_num IS NOT NULL
+             WHERE p.bl_num = np.bl_num ORDER BY p.popularity DESC, p.rb_num LIMIT 1',
+            $part
+        );
+        $b->insert('storage_label', [
+            'storage_id' => $storageId,
+            'part' => $usual !== [] ? (string) $usual[0]['rb_num'] : $part,
+            'position' => (int) $count['last'] + 1,
+        ]);
     }
 
     /** @return array<string, mixed> */
