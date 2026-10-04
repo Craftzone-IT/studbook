@@ -191,6 +191,17 @@ final class OwnedPagesTest extends OwnedTestCase
         );
     }
 
+    public function testTemporaryErrorsGetTheShortLivedPlaceholder(): void
+    {
+        $this->login();
+        $this->pdo->exec("INSERT INTO cat_image_cache (part, color_id, status, fetched_at)
+            VALUES ('3001', 4, 'error', UTC_TIMESTAMP())");
+        $image = $this->get('/img?part=3001&color=4');
+        self::assertSame(200, $image->status, 'no pending loop for an error the server will retry later');
+        self::assertSame('image/svg+xml', $image->header('Content-Type'));
+        self::assertSame('private, max-age=300', $image->header('Cache-Control'));
+    }
+
     public function testBusyDownloadsAnswerWithAPendingPicture(): void
     {
         $this->login();

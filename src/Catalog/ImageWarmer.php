@@ -69,14 +69,14 @@ final class ImageWarmer
              ) x
              LEFT JOIN cat_image_cache c ON c.part = x.part AND c.color_id = x.color_id
              WHERE c.part IS NULL
-                OR (c.status = 'error' AND c.fetched_at < UTC_TIMESTAMP() - INTERVAL %d HOUR)
+                OR (c.status = 'error' AND c.fetched_at < UTC_TIMESTAMP() - INTERVAL %d MINUTE)
                 OR (c.status = 'missing' AND c.fetched_at < UTC_TIMESTAMP() - INTERVAL %d HOUR)
              GROUP BY x.part, x.color_id
              ORDER BY priority, x.part, x.color_id
              LIMIT %d",
             ImageCache::ANY_COLOR,
             ImageCache::SET_IMAGE,
-            ImageCache::RETRY_ERROR_HOURS,
+            ImageCache::RETRY_ERROR_MINUTES,
             ImageCache::RETRY_MISSING_HOURS,
             max(1, $this->perRun)
         ));

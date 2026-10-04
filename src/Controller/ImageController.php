@@ -38,13 +38,14 @@ final class ImageController
         }
         $cache = ($this->cache)();
         $image = $cache->get($part, (int) $color);
-        if ($image === null && $cache->lastMiss !== 'missing') {
-            // Not fetched yet (all download slots busy, or a temporary error): a "pending" picture
-            // that is never cached; assets/app.js asks again a little later.
+        if ($image === null && $cache->lastMiss === 'busy') {
+            // Not fetched yet because all download slots are busy: a "pending" picture that is
+            // never cached; assets/app.js asks again a little later.
             return Response::redirect(url(self::PENDING))->withHeader('Cache-Control', 'no-store');
         }
         if ($image === null) {
-            return self::placeholder();
+            // No picture (or a temporary download error, retried by the server after ten minutes).
+            return self::placeholder($cache->lastMiss === 'missing' ? 86400 : 300);
         }
         $body = file_get_contents($image['path']);
         if ($body === false) {
@@ -55,15 +56,14 @@ final class ImageController
             ->withHeader('Cache-Control', 'private, max-age=604800');
     }
 
-    private static function placeholder(): Response
+    private static function placeholder(int $maxAge = 86400): Response
     {
         $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">'
             . '<rect x="6" y="14" width="28" height="18" rx="2" fill="#d6d6d0"/>'
             . '<rect x="11" y="9" width="7" height="6" rx="1.5" fill="#d6d6d0"/>'
             . '<rect x="22" y="9" width="7" height="6" rx="1.5" fill="#d6d6d0"/></svg>';
 
-        // Only for images that do not exist; the cache retries those after a week.
         return (new Response($svg, 200, ['Content-Type' => 'image/svg+xml']))
-            ->withHeader('Cache-Control', 'private, max-age=86400');
+            ->withHeader('Cache-Control', 'private, max-age=' . $maxAge);
     }
 }

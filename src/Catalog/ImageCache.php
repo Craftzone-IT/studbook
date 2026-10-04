@@ -9,8 +9,8 @@ use PDO;
 /**
  * Part and set images, fetched from Rebrickable on first display and served from
  * IMAGE_CACHE_PATH afterwards. A missing image (no URL, HTTP 404) is
- * retried after a week, a temporary failure (timeout, server error) after an
- * hour, so neither causes a request on every page view.
+ * retried after a week, a temporary failure (timeout, server error) after ten
+ * minutes, so neither causes a request on every page view.
  *
  * At most MAX_PARALLEL downloads run at a time. A request that finds all
  * download slots taken gets no image at once (`lastMiss` = `busy`) instead
@@ -23,7 +23,7 @@ final class ImageCache
     /** Colour id under which a set picture is cached (the "part" is the set number). */
     public const SET_IMAGE = -2;
     public const RETRY_MISSING_HOURS = 24 * 7;
-    public const RETRY_ERROR_HOURS = 1;
+    public const RETRY_ERROR_MINUTES = 10;
     public const MAX_BYTES = 2_000_000;
     public const MAX_PARALLEL = 3;
     private const ALLOWED_TYPES = [
@@ -67,8 +67,10 @@ final class ImageCache
                     'content_type' => (string) $cached['content_type'],
                 ];
             }
-            $hours = $cached['status'] === 'missing' ? self::RETRY_MISSING_HOURS : self::RETRY_ERROR_HOURS;
-            $retryAfter = strtotime((string) $cached['fetched_at'] . ' UTC') + $hours * 3600;
+            $seconds = $cached['status'] === 'missing'
+                ? self::RETRY_MISSING_HOURS * 3600
+                : self::RETRY_ERROR_MINUTES * 60;
+            $retryAfter = strtotime((string) $cached['fetched_at'] . ' UTC') + $seconds;
             if ($cached['status'] !== 'ok' && time() < $retryAfter) {
                 $this->lastMiss = $cached['status'] === 'missing' ? 'missing' : 'error';
 
@@ -120,32 +122,45 @@ final class ImageCache
 
             return null;
         } finally {
-            flock($slot, LOCK_UN);
-            fclose($slot);
+            if (is_resource($slot)) {
+                flock($slot, LOCK_UN);
+                fclose($slot);
+            }
         }
     }
 
     /**
      * One of MAX_PARALLEL download slots (file locks, released when the request ends even if
-     * it crashes); null when all are in use.
+     * it crashes); null when all are in use. When the lock files cannot be used at all (e.g.
+     * the folder belongs to another user), downloads go ahead without a limit (`true`) rather
+     * than never.
      *
-     * @return resource|null
+     * @return resource|true|null
      */
-    private function takeSlot()
+    private function takeSlot(): mixed
     {
         $dir = $this->directory . '/.locks';
         if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
-            return null;
+            error_log('Studbook: cannot create ' . $dir . '; downloading pictures without a limit.');
+
+            return true;
         }
+        $opened = 0;
         for ($i = 0; $i < self::MAX_PARALLEL; $i++) {
             $handle = @fopen($dir . '/fetch-' . $i . '.lock', 'c');
             if ($handle === false) {
                 continue;
             }
+            $opened++;
             if (flock($handle, LOCK_EX | LOCK_NB)) {
                 return $handle;
             }
             fclose($handle);
+        }
+        if ($opened === 0) {
+            error_log('Studbook: cannot open the lock files in ' . $dir . '; downloading pictures without a limit.');
+
+            return true;
         }
 
         return null;
