@@ -13,6 +13,7 @@ use Studbook\Http\Csrf;
  * @var list<array{id: int, name: string, collection_name: string}> $otherBoxes
  * @var list<array{id: int, name: string}> $collections other collections
  * @var list<string> $boxTypes
+ * @var bool $isPrintBox printed parts of the collection go into this box
  * @var \Studbook\I18n\Formatter $fmt
  */
 $csrf = '<input type="hidden" name="' . e(Csrf::FIELD) . '" value="' . e(Csrf::token()) . '">';
@@ -99,6 +100,10 @@ $img = static fn (string $part, int $color): string => url('/img') . '?part=' . 
                     <option value="<?= e($type) ?>"<?= $type === $box['type'] ? ' selected' : '' ?>><?= e(t('box_type.' . $type)) ?></option>
                 <?php endforeach; ?>
             </select>
+            <label class="checkbox">
+                <input type="checkbox" name="print_box" value="1"<?= $isPrintBox ? ' checked' : '' ?>>
+                <?= e(t('box.print_box')) ?>
+            </label>
         <?php endif; ?>
         <button type="submit" class="button button-primary"><?= e(t('settings.save')) ?></button>
     </form>

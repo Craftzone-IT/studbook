@@ -36,6 +36,14 @@ final class SettingRepository
         }
     }
 
+    public function delete(string $key): void
+    {
+        $this->pdo->prepare('DELETE FROM setting WHERE `key` = ?')->execute([$key]);
+        if ($this->cache !== null) {
+            unset($this->cache[$key]);
+        }
+    }
+
     /** @return array<string, string> */
     private function loadAll(): array
     {

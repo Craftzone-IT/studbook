@@ -50,6 +50,9 @@ $boxId = $box !== null ? (int) $box['id'] : null;
                                         <?= e(t('identify.not_in_catalogue')) ?>
                                     <?php endif; ?>
                                 </span>
+                                <?php if ($c['rb_num'] !== null) : ?>
+                                    <a class="lot-where" href="<?= e(url('/where') . '?part=' . rawurlencode($c['rb_num'])) ?>"><?= e(t('where.link')) ?></a>
+                                <?php endif; ?>
                             </div>
                             <div class="lot-qty"><?= e((int) round(100 * $c['score'])) ?>%</div>
                         </li>

@@ -9,7 +9,7 @@ use Studbook\Http\Csrf;
  * @var array<string, mixed> $box
  * @var array{rb_num: string, bl_num: ?string, name: string, display: string} $part
  * @var list<array{id: int, name: string, rgb: string, part: string}> $colors part = Rebrickable part stored for the colour
- * @var list<array{id: int, name: string}> $hint boxes labelled for this part (when this one is not)
+ * @var list<array{id: int, name: string, reason: string}> $hint the box this part belongs in (when it is another one)
  */
 $id = (int) $box['id'];
 ?>
@@ -21,8 +21,9 @@ $id = (int) $box['id'];
 <?php if ($hint !== []) : ?>
     <p class="flash flash-info">
         <?= e(t('entry.hint')) ?>
-        <?php foreach ($hint as $i => $other) : ?>
-            <a href="<?= e(url('/b/' . $other['id'])) ?>"><?= e($other['name']) ?></a><?= $i < count($hint) - 1 ? ',' : '' ?>
+        <?php foreach ($hint as $other) : ?>
+            <a href="<?= e(url('/b/' . $other['id'] . '/add') . '?part=' . rawurlencode($part['rb_num'])) ?>"><?= e($other['name']) ?></a>
+            – <?= e($other['reason']) ?>
         <?php endforeach; ?>
     </p>
 <?php endif; ?>

@@ -141,6 +141,18 @@ final class CatalogRepository
         return [$rbNum, ...array_map('strval', $stmt->fetchAll(PDO::FETCH_COLUMN))];
     }
 
+    /** Name of the part's category, or null when the part or its category is unknown. */
+    public function categoryName(string $rbNum): ?string
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT c.name FROM cat_part p JOIN cat_part_category c ON c.id = p.category_id WHERE p.rb_num = ?'
+        );
+        $stmt->execute([$rbNum]);
+        $name = $stmt->fetchColumn();
+
+        return is_string($name) ? $name : null;
+    }
+
     /** @return array<int, array{id: int, name: string, rgb: string}> */
     public function colors(): array
     {

@@ -142,11 +142,9 @@
                 );
                 if (data.hint && data.hint.length > 0) {
                     hint.textContent = t('Hint') + ' ';
-                    data.hint.forEach((b, i) => {
-                        hint.append(el('a', { href: root.dataset.boxUrl + b.id + '/entry', text: b.name }));
-                        if (i < data.hint.length - 1) {
-                            hint.append(document.createTextNode(', '));
-                        }
+                    data.hint.forEach((b) => {
+                        const href = `${root.dataset.boxUrl}${b.id}/entry?part=${encodeURIComponent(part.rb_num)}`;
+                        hint.append(el('a', { href, text: b.name }), document.createTextNode(` – ${b.reason}`));
                     });
                     hint.hidden = false;
                 } else {

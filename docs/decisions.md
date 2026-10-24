@@ -56,6 +56,13 @@ Record of product and technical decisions made during planning (October 2026). A
 - Backups: HestiaCP's built-in backup is sufficient (catalogue data can always be re-imported).
 - Development on GitHub; code written by Claude Code; issue → PR → review → merge. ~~Automatic deploy via GitHub Actions.~~ Superseded 2026-10-03: deployment is manual (see below).
 
+## Placement advice (2026-10-24)
+
+- **"Where does it go?"** (`/where`, `PlacementAdvisor`) ranks the boxes of one collection for a part, in fixed steps: the part is on the label; the same part under another number (same BrickLink number, or same mould/alternate group in `cat_part_canon.variant`) is on the label; for prints and patterns, the collection's print box, then the unprinted part (or anything in its `cat_part_canon.print` group) on a label; loose lots of the part already in the box; finally boxes labelled for parts of the same category, nearest size first. A box found by an earlier step always ranks higher and is listed once. The Inbox is never suggested; with no match the page offers the Inbox and names the category.
+- **Labels and categories, not per-box rules.** Boxes are sorted by part type, and their labels already say what they hold (seed labels for empty boxes, automatic labels as parts go in). Deriving the advice from labels and the catalogue needs no configuration per box and no migration, and improves as labels grow. The only setting is the optional print box (`print_box.{collection_id}`), a setting and not owned data, so it is not undone with batches; deleting or moving the box clears it.
+- **Size distance:** orientation-free, |shorter side difference| + |longer side difference|; parts without width/length get a constant 99, so such boxes rank by the number of same-category labels, then by name. The unsigned size columns are cast to `SIGNED` before subtracting.
+- The add form and fast entry hint show the best box with its reason when the current box is not among the advised ones (previously: exact labels only).
+
 ## Part numbers written on boxes automatically (2026-10-04)
 
 - Adding parts to a box (add form, fast entry) or moving parts into it writes the part number on the box, in the same batch, so undo takes it back. It is skipped when the box already has it, also as another Rebrickable part with the same BrickLink number; the label uses the usual part for that BrickLink number (3003, not the transparent 6223).
