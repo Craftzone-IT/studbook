@@ -6,14 +6,14 @@ Guidance for Claude Code (and humans) working in this repository. Read this firs
 
 Studbook is an open-source (AGPL-3.0), self-hosted PHP/MySQL web app for cataloguing a physical brick collection and finding out what can be built from it. One login per instance, several collections, no public registration.
 
-Background, decisions and their reasons: `docs/decisions.md`. Data model: `docs/data-model.md`. Roadmap and issue specs: `docs/milestones.md`. Cloud development environment: `docs/cloud-dev.md`.
+Background, decisions and their reasons: `docs/decisions.md`. Data model: `docs/data-model.md`. Roadmap and issue specs: `docs/milestones.md`. Placement advice (M7) spec: `docs/placement-advice.md`. Cloud development environment: `docs/cloud-dev.md`.
 
 ## Current status
 
 - **Phase:** M0–M5 merged (M5 #20). M1 runs on the host with the Rebrickable API (61,362/64,769 parts and 216/275 colours matched to BrickLink).
 - **Done:** M0 (#8, #10, #14 Hestia layout), browser setup wizard (#9), M1 importer (#12) with Rebrickable API ids (#15), M2 collections and boxes (#13), M3 fast entry (#18), M4 sets (#19), M5 what can I build (#20).
 - **In progress:** M6 – Camera (#7): QR scanner, box labels from a photo with server-side Tesseract, part recognition with Brickognize.
-- **Next:** after M6 is merged, apply migrations 0004–0006 on the host if not done; enable the camera features as described in `docs/deploy-hestia.md` and test OCR on real (handwritten) box lids. M6 is the last milestone of the current roadmap (`docs/milestones.md`).
+- **Next:** after M6 is merged, apply migrations 0004–0006 on the host if not done; enable the camera features as described in `docs/deploy-hestia.md` and test OCR on real (handwritten) box lids. Then M7 – placement advice ("Where does it go?"), specified in `docs/placement-advice.md`; no migration needed.
 - **Open questions:**
   - PHP on the maintainer's host is 8.3 (`/usr/bin/php8.3`); `proc_open` and `shell_exec` are disabled there. OCR needs `exec()` (custom PHP-FPM template, see `docs/deploy-hestia.md`).
   - Rebrickable API format confirmed on the host (2026-10-04); `rebrickable.com` is not reachable from the cloud dev environment unless added to its network allowlist.
