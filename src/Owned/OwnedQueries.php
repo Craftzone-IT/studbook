@@ -135,25 +135,6 @@ final class OwnedQueries
     }
 
     /**
-     * Boxes of a collection whose label lists the part ("where does this go?").
-     *
-     * @return list<array{id: int, name: string}>
-     */
-    public function labelledBoxes(int $collectionId, string $part): array
-    {
-        $stmt = $this->pdo->prepare(
-            'SELECT b.id, b.name FROM storage_label l JOIN storage b ON b.id = l.storage_id
-             WHERE b.collection_id = ? AND l.part = ? ORDER BY b.name'
-        );
-        $stmt->execute([$collectionId, $part]);
-
-        return array_map(
-            static fn (array $r): array => ['id' => (int) $r['id'], 'name' => (string) $r['name']],
-            $stmt->fetchAll(PDO::FETCH_ASSOC)
-        );
-    }
-
-    /**
      * Where parts are kept: loose quantities per box, across all collections.
      *
      * @param list<string> $parts

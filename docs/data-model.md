@@ -29,7 +29,7 @@ BL↔RB matching: the importer fills `cat_part.bl_num` / `cat_color.bl_id` from 
 
 | Table | Purpose / key columns |
 | --- | --- |
-| `setting` | `key`, `value` — e.g. `ui_language` (default `en`), `import_cron_seen_at` |
+| `setting` | `key`, `value` — e.g. `ui_language` (default `en`), `import_cron_seen_at`, `print_box.{collection_id}` (id of the box that holds the collection's printed and patterned parts, used by placement advice; at most one per collection, removed when that box is deleted or moved) |
 | `user` | single login (username, password hash, `last_login_at`) |
 | `login_attempt` | failed logins (`ip`, `attempted_at`) for rate limiting; rows older than a day are purged |
 | `schema_migration` | applied migrations (`version`, `name`, `checksum`, `applied_at`); created by `bin/migrate` |

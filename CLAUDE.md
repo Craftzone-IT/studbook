@@ -10,10 +10,10 @@ Background, decisions and their reasons: `docs/decisions.md`. Data model: `docs/
 
 ## Current status
 
-- **Phase:** M0–M5 merged (M5 #20). M1 runs on the host with the Rebrickable API (61,362/64,769 parts and 216/275 colours matched to BrickLink).
-- **Done:** M0 (#8, #10, #14 Hestia layout), browser setup wizard (#9), M1 importer (#12) with Rebrickable API ids (#15), M2 collections and boxes (#13), M3 fast entry (#18), M4 sets (#19), M5 what can I build (#20).
-- **In progress:** M6 – Camera (#7): QR scanner, box labels from a photo with server-side Tesseract, part recognition with Brickognize.
-- **Next:** after M6 is merged, apply migrations 0004–0006 on the host if not done; enable the camera features as described in `docs/deploy-hestia.md` and test OCR on real (handwritten) box lids. Then M7 – placement advice ("Where does it go?"), specified in `docs/placement-advice.md`; no migration needed.
+- **Phase:** M0–M6 merged (M6 #21); M7 implemented, awaiting review. M1 runs on the host with the Rebrickable API (61,362/64,769 parts and 216/275 colours matched to BrickLink).
+- **Done:** M0 (#8, #10, #14 Hestia layout), browser setup wizard (#9), M1 importer (#12) with Rebrickable API ids (#15), M2 collections and boxes (#13), M3 fast entry (#18), M4 sets (#19), M5 what can I build (#20), M6 camera (#21) with follow-ups (#22–#25), M7 spec (#26).
+- **In progress:** M7 – placement advice ("Where does it go?", `docs/placement-advice.md`): `PlacementAdvisor`, `/where` page, print box setting, add form and fast entry hints from the advisor. No migration.
+- **Next:** after M7 is merged, check the "done when" list on the host (26603, 3033, 4070 and 3794b on `/where`) with the real box names and seed labels. Still open from M6: apply migrations 0004–0006 on the host if not done; enable the camera features as described in `docs/deploy-hestia.md` and test OCR on real (handwritten) box lids.
 - **Open questions:**
   - PHP on the maintainer's host is 8.3 (`/usr/bin/php8.3`); `proc_open` and `shell_exec` are disabled there. OCR needs `exec()` (custom PHP-FPM template, see `docs/deploy-hestia.md`).
   - Rebrickable API format confirmed on the host (2026-10-04); `rebrickable.com` is not reachable from the cloud dev environment unless added to its network allowlist.

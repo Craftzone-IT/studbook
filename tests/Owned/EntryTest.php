@@ -121,7 +121,11 @@ final class EntryTest extends OwnedTestCase
 
         $part = self::json($this->get('/b/' . $inbox . '/entry/part?part=3001'));
         self::assertSame([0, 4], array_column($part['colors'], 'id'), 'only colours the part exists in');
-        self::assertSame([['id' => $box, 'name' => 'Bricks']], $part['hint'], 'where does this go?');
+        self::assertSame(
+            [['id' => $box, 'name' => 'Bricks', 'reason' => 'Labelled for this part']],
+            $part['hint'],
+            'where does this go?'
+        );
         self::assertSame('red', $part['colorSynonyms']['piros']);
         self::assertSame([], self::json($this->get('/b/' . $box . '/entry/part?part=3001'))['hint']);
         self::assertSame(404, $this->get('/b/' . $inbox . '/entry/part?part=nope')->status);

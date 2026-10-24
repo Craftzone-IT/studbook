@@ -13,6 +13,7 @@ use Studbook\Controller\AuthController;
 use Studbook\Controller\BatchController;
 use Studbook\Build\BuildService;
 use Studbook\Build\CoverageService;
+use Studbook\Build\PartEquivalence;
 use Studbook\Camera\Brickognize;
 use Studbook\Camera\TesseractOcr;
 use Studbook\Controller\BoxController;
@@ -28,6 +29,7 @@ use Studbook\Controller\ImportController;
 use Studbook\Controller\SetController;
 use Studbook\Controller\SettingsController;
 use Studbook\Controller\SetupController;
+use Studbook\Controller\WhereController;
 use Studbook\Database\Connection;
 use Studbook\Http\Csrf;
 use Studbook\Http\Request;
@@ -44,6 +46,7 @@ use Studbook\Catalog\PartSearch;
 use Studbook\Owned\BatchService;
 use Studbook\Owned\OwnedQueries;
 use Studbook\Owned\OwnedService;
+use Studbook\Owned\PlacementAdvisor;
 use Studbook\Owned\SetService;
 use Studbook\Setup\SetupService;
 
@@ -177,8 +180,22 @@ final class App
         );
         $queries = fn (): OwnedQueries => new OwnedQueries($this->pdo());
         $catalog = fn (): CatalogRepository => new CatalogRepository($this->pdo());
+        $advisor = function (): PlacementAdvisor {
+            // Mould groups come from cat_part_canon, which is filled on first use after the migration.
+            (new PartEquivalence($this->pdo()))->ensure();
+
+            return new PlacementAdvisor($this->pdo());
+        };
         $collections = new CollectionController($this->view, $this->config, $owned, $queries, $catalog);
-        $boxes = new BoxController($this->view, $this->config, $owned, $queries, $catalog);
+        $boxes = new BoxController(
+            $this->view,
+            $this->config,
+            $owned,
+            $queries,
+            $catalog,
+            $advisor,
+            fn (): SettingRepository => $this->settings()
+        );
         $sets = new SetController($this->view, fn (): SetService => new SetService(
             new BatchService($this->pdo()),
             new OwnedQueries($this->pdo()),
@@ -194,7 +211,8 @@ final class App
             $this->pdo(),
             $this->config->path('STORAGE_PATH', 'storage') . '/cache'
         );
-        $entry = new EntryController($this->view, $owned, $queries, $catalog, $search);
+        $entry = new EntryController($this->view, $owned, $queries, $catalog, $search, $advisor);
+        $where = new WhereController($this->view, $queries, $catalog, $advisor);
         $searchPage = new SearchController($this->view, $search, $queries);
         $picker = new PickerController($this->view, fn (): PDO => $this->pdo(), $queries);
         $buildPages = new BuildController(
@@ -281,6 +299,7 @@ final class App
         $this->router->get('/b/{id}/entry/search', $entry->search(...), light: true);
         $this->router->get('/b/{id}/pick', $picker->page(...));
         $this->router->get('/search', $searchPage->page(...));
+        $this->router->get('/where', $where->page(...));
         $this->router->get('/history', $history->page(...));
         $this->router->get('/scan', $camera->scan(...));
         $this->router->get('/b/{id}/labels/photo', $camera->labelsForm(...));

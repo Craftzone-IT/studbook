@@ -26,3 +26,11 @@ document.addEventListener('load', (event) => {
         img.src = `${original}${original.includes('?') ? '&' : '?'}retry=${tries + 1}`;
     }, 1500 * 2 ** tries);
 }, true);
+
+// "Where does it go?": the last part number stays in the field, selected, so typing the next one replaces it.
+document.querySelectorAll('[data-select-on-load]').forEach((input) => {
+    if (document.activeElement === input || document.activeElement === document.body) {
+        input.focus();
+        input.select();
+    }
+});

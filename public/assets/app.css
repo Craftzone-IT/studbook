@@ -1263,3 +1263,79 @@ label.radio {
     margin: 0;
     padding-left: 18px;
 }
+
+/* "Where does it go?" */
+.where-form label {
+    flex: 1 1 100%;
+}
+
+.where-part {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.where-category {
+    display: block;
+}
+
+.where-best {
+    margin-top: 16px;
+    padding: 12px;
+    border: 2px solid var(--accent);
+    border-radius: var(--radius);
+}
+
+.where-best h2 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--muted);
+}
+
+.where-box {
+    margin: 4px 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.where-reason {
+    margin: 0 0 12px;
+}
+
+.where-add {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+.where-alternatives {
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.where-alternatives li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    border-top: 1px solid var(--border);
+}
+
+.where-alternatives .hint {
+    display: block;
+    margin: 0;
+}
+
+@media (min-width: 768px) {
+    .where-add {
+        display: inline-flex;
+        width: auto;
+    }
+}
+
+.where-alternatives .button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}

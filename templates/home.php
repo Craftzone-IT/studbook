@@ -22,6 +22,15 @@ $utc = new \DateTimeZone('UTC');
     </p>
 <?php endif; ?>
 
+<?php if ($active !== []) : ?>
+    <form method="get" action="<?= e(url('/where')) ?>" class="form-inline where-form" role="search">
+        <label for="home-where"><?= e(t('where.title')) ?></label>
+        <input id="home-where" name="part" type="text" required autocomplete="off" inputmode="text"
+               autocapitalize="none" spellcheck="false" placeholder="<?= e(t('where.part_label')) ?>">
+        <button type="submit" class="button button-primary"><?= e(t('where.submit')) ?></button>
+    </form>
+<?php endif; ?>
+
 <?php if ($active === []) : ?>
     <p><?= e(t('home.empty')) ?></p>
 <?php endif; ?>

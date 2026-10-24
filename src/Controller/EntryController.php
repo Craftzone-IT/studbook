@@ -12,6 +12,7 @@ use Studbook\Http\Response;
 use Studbook\Http\Session;
 use Studbook\Owned\OwnedQueries;
 use Studbook\Owned\OwnedService;
+use Studbook\Owned\PlacementAdvisor;
 use Studbook\View;
 
 /**
@@ -33,12 +34,15 @@ final class EntryController
     private \Closure $catalog;
     /** @var \Closure(): PartSearch */
     private \Closure $search;
+    /** @var \Closure(): PlacementAdvisor */
+    private \Closure $advisor;
 
     /**
      * @param callable(): OwnedService $owned
      * @param callable(): OwnedQueries $queries
      * @param callable(): CatalogRepository $catalog
      * @param callable(): PartSearch $search
+     * @param callable(): PlacementAdvisor $advisor
      */
     public function __construct(
         private readonly View $view,
@@ -46,11 +50,13 @@ final class EntryController
         callable $queries,
         callable $catalog,
         callable $search,
+        callable $advisor,
     ) {
         $this->owned = \Closure::fromCallable($owned);
         $this->queries = \Closure::fromCallable($queries);
         $this->catalog = \Closure::fromCallable($catalog);
         $this->search = \Closure::fromCallable($search);
+        $this->advisor = \Closure::fromCallable($advisor);
     }
 
     /** @param array<string, string> $params */
@@ -84,7 +90,7 @@ final class EntryController
     }
 
     /**
-     * JSON: a part with its colours and the boxes labelled for it.
+     * JSON: a part with its colours and the box it belongs in, when that is another box.
      *
      * @param array<string, string> $params
      */
@@ -102,7 +108,10 @@ final class EntryController
         return Response::json([
             'part' => $part,
             'colors' => $catalog->colorsForPart($part['rb_num']),
-            'hint' => $this->hint($box, $part['rb_num']),
+            'hint' => WhereController::hint(
+                ($this->advisor)()->advise((int) $box['collection_id'], $part['rb_num']),
+                (int) $box['id']
+            ),
             'colorSynonyms' => $catalog->colorSynonyms(),
         ]);
     }
@@ -186,24 +195,6 @@ final class EntryController
                 'compact' => true,
             ], null),
         ]);
-    }
-
-    /**
-     * Boxes of the same collection labelled for the part, when the current box is not.
-     *
-     * @param array<string, mixed> $box
-     * @return list<array{id: int, name: string}>
-     */
-    private function hint(array $box, string $part): array
-    {
-        $boxes = ($this->queries)()->labelledBoxes((int) $box['collection_id'], $part);
-        foreach ($boxes as $labelled) {
-            if ($labelled['id'] === (int) $box['id']) {
-                return [];
-            }
-        }
-
-        return $boxes;
     }
 
     /** @return array{batch: int, at: int}|null the open entry session of a box */

@@ -44,6 +44,7 @@ $color = $result['color'] ?? null;
                     <div class="lot-main">
                         <strong><?= e($part['display']) ?></strong>
                         <span class="lot-name"><?= e($part['name']) ?></span>
+                        <a class="lot-where" href="<?= e(url('/where') . '?part=' . rawurlencode($part['rb_num'])) ?>"><?= e(t('where.link')) ?></a>
                         <?php if ($where !== []) : ?>
                             <span class="lot-where">
                                 <?= e(t('search.kept_in')) ?>

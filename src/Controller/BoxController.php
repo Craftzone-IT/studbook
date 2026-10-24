@@ -13,7 +13,9 @@ use Studbook\Http\Session;
 use Studbook\Owned\LabelParser;
 use Studbook\Owned\OwnedQueries;
 use Studbook\Owned\OwnedService;
+use Studbook\Owned\PlacementAdvisor;
 use Studbook\QrCode;
+use Studbook\SettingRepository;
 use Studbook\View;
 
 /** Box page `/b/{id}` (the QR code target): labels, contents and quick actions. */
@@ -25,11 +27,17 @@ final class BoxController
     private \Closure $queries;
     /** @var \Closure(): CatalogRepository */
     private \Closure $catalog;
+    /** @var \Closure(): PlacementAdvisor */
+    private \Closure $advisor;
+    /** @var \Closure(): SettingRepository */
+    private \Closure $settings;
 
     /**
      * @param callable(): OwnedService $owned
      * @param callable(): OwnedQueries $queries
      * @param callable(): CatalogRepository $catalog
+     * @param callable(): PlacementAdvisor $advisor
+     * @param callable(): SettingRepository $settings
      */
     public function __construct(
         private readonly View $view,
@@ -37,10 +45,14 @@ final class BoxController
         callable $owned,
         callable $queries,
         callable $catalog,
+        callable $advisor,
+        callable $settings,
     ) {
         $this->owned = \Closure::fromCallable($owned);
         $this->queries = \Closure::fromCallable($queries);
         $this->catalog = \Closure::fromCallable($catalog);
+        $this->advisor = \Closure::fromCallable($advisor);
+        $this->settings = \Closure::fromCallable($settings);
     }
 
     /** @param array<string, string> $params */
@@ -77,6 +89,7 @@ final class BoxController
                 static fn (array $c): bool => $c['id'] !== (int) $box['collection_id']
             )),
             'boxTypes' => OwnedService::USER_BOX_TYPES,
+            'isPrintBox' => $this->printBoxOf((int) $box['collection_id']) === (int) $box['id'],
         ]));
     }
 
@@ -84,8 +97,20 @@ final class BoxController
     public function update(Request $request, array $params): Response
     {
         $id = (int) $params['id'];
+        $box = ($this->queries)()->box($id);
+        if ($box === null) {
+            return ErrorPage::render(404, null, $this->view);
+        }
 
-        $work = fn (): int => ($this->owned)()->updateBox($id, $request->input('name'), $request->input('type'));
+        $work = function () use ($id, $box, $request): int {
+            $batch = ($this->owned)()->updateBox($id, $request->input('name'), $request->input('type'));
+            // A setting, not owned data: not part of the undo batch (like the UI language).
+            if ($box['type'] !== 'inbox') {
+                $this->setPrintBox((int) $box['collection_id'], $id, $request->input('print_box') === '1');
+            }
+
+            return $batch;
+        };
 
         return $this->act($id, $work, 'box.updated');
     }
@@ -94,12 +119,17 @@ final class BoxController
     public function moveToCollection(Request $request, array $params): Response
     {
         $id = (int) $params['id'];
+        $box = ($this->queries)()->box($id);
+        if ($box === null) {
+            return ErrorPage::render(404, null, $this->view);
+        }
 
-        return $this->act(
-            $id,
-            fn (): int => ($this->owned)()->moveBox($id, (int) $request->input('collection')),
-            'box.moved'
-        );
+        return $this->act($id, function () use ($id, $box, $request): int {
+            $batch = ($this->owned)()->moveBox($id, (int) $request->input('collection'));
+            $this->setPrintBox((int) $box['collection_id'], $id, false);
+
+            return $batch;
+        }, 'box.moved');
     }
 
     /** @param array<string, string> $params */
@@ -111,6 +141,7 @@ final class BoxController
         }
         try {
             $batch = ($this->owned)()->deleteBox((int) $box['id']);
+            $this->setPrintBox((int) $box['collection_id'], (int) $box['id'], false);
         } catch (\DomainException $e) {
             Session::flash('error', t('owned.error.' . $e->getMessage()));
 
@@ -160,8 +191,8 @@ final class BoxController
             return Response::redirect(url('/b/' . $box['id']));
         }
 
-        $labelled = ($this->queries)()->labelledBoxes((int) $box['collection_id'], $part['rb_num']);
-        $hint = in_array((int) $box['id'], array_column($labelled, 'id'), true) ? [] : $labelled;
+        $advice = ($this->advisor)()->advise((int) $box['collection_id'], $part['rb_num']);
+        $hint = WhereController::hint($advice, (int) $box['id']);
 
         return Response::html($this->view->render('box-add', [
             'title' => t('box.add_title', ['part' => $part['display']]),
@@ -243,6 +274,25 @@ final class BoxController
         }
 
         return $this->act((int) $lot['storage_id'], static fn (): int => $work((int) $lot['id']), $messageKey);
+    }
+
+    /** Box that holds the printed parts of a collection, if any. */
+    private function printBoxOf(int $collectionId): ?int
+    {
+        $value = ($this->settings)()->get(PlacementAdvisor::printBoxKey($collectionId));
+
+        return $value !== null && preg_match('/^\d+$/', $value) === 1 ? (int) $value : null;
+    }
+
+    /** Makes the box the collection's print box (moving the role from another box), or clears it from this box. */
+    private function setPrintBox(int $collectionId, int $boxId, bool $on): void
+    {
+        $key = PlacementAdvisor::printBoxKey($collectionId);
+        if ($on) {
+            ($this->settings)()->set($key, (string) $boxId);
+        } elseif ($this->printBoxOf($collectionId) === $boxId) {
+            ($this->settings)()->delete($key);
+        }
     }
 
     /** @param callable(): int $work */
