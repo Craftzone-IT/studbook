@@ -78,3 +78,16 @@ Issues: one per milestone, Craftzone-IT/studbook#1 (M0) to #7 (M6), created on 2
 - [ ] Photo upload of a box lid or paper list → server-side OCR (Tesseract) → candidate part numbers validated against the catalogue → user confirms → saved as box labels.
 - [ ] Single-part photo → Brickognize → top candidates with images → user picks part and colour. Timeouts, error handling and fallback to search; feature can be disabled in `.env`.
 - [ ] Record findings about OCR accuracy and the Brickognize response format in `docs/decisions.md`.
+
+## M7 – Placement advice
+
+**Goal:** type a part number, get the box it belongs in — also for parts no box is labelled for yet. Full spec: [`docs/placement-advice.md`](placement-advice.md).
+
+- [ ] `PlacementAdvisor`: ranked boxes of one collection for a part — exact label, same part under another number (BrickLink number or mould/alternate group), print box, unprinted parent on a label, already stored there, same category with the nearest size; Inbox never suggested; unit tests for each step.
+- [ ] `/where` page (`part`, `c` query parameters): best box plus up to two alternatives, each with its reason; *Add here* to the existing add form; no matching box → Inbox with the part's category named; keyboard flow for looking up many parts in a row; works without JavaScript.
+- [ ] Entry points: nav item, field on the home page, links from `/identify` and `/search`.
+- [ ] The add form and fast entry hints use the advisor instead of exact labels only.
+- [ ] "Printed parts go here" on the box page, stored in `setting` as `print_box.{collection_id}`; cleared when the box is deleted or moved.
+- [ ] All strings in `en.php` and `hu.php`; "Placement advice" entry in `docs/decisions.md`; setting documented in `docs/data-model.md`.
+
+**Done when:** on the maintainer's instance, 26603 (tile 2 × 3), 3033 (plate 6 × 10), 4070 (brick 1 × 1 with headlight) and 3794b (jumper) are each sent to the box holding their kind of part, and *Add here* opens the right colour/quantity form.
